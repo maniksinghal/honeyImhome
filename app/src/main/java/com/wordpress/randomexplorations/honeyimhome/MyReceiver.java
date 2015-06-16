@@ -9,6 +9,9 @@ import android.preference.PreferenceManager;
 import android.telephony.SmsManager;
 import android.util.Log;
 
+import java.util.Calendar;
+import java.util.Date;
+
 public class MyReceiver extends BroadcastReceiver {
     public MyReceiver() {
     }
@@ -39,6 +42,26 @@ public class MyReceiver extends BroadcastReceiver {
 
         if (bt != null && message != null && bt_device.equals(bt.getName())) {
             // Found a valid intent
+
+            // Check if its correct time of day to respond to these events
+            Calendar cal = Calendar.getInstance();
+            int hours = cal.get(Calendar.HOUR_OF_DAY);
+            int day = cal.get(Calendar.DAY_OF_WEEK);
+            switch(day) {
+                case Calendar.SUNDAY:
+                case Calendar.SATURDAY:
+                    // Weekends.. ignore
+                    Log.d("this", "Its a weekend.. false alarm");
+                    return;
+            }
+            if (hours < 16) {
+                // who leaves office before 4pm??
+                Log.d("this", "Its not evening.. " + hours + "...false alarm");
+                return;
+            }
+
+            Log.d("this", "Its " + hours + " on " + day + " day");
+
             String phone = prefs.getString("phone_number", "0000");
             SmsManager smsManager = SmsManager.getDefault();
             smsManager.sendTextMessage(phone, null, message, null, null);

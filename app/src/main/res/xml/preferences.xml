@@ -18,4 +18,10 @@
         android:key="disconnect_message"
         android:title="Message on disconnect"
         android:defaultValue="Reached home" />
+    <EditTextPreference
+        android:key="time_slot"
+        android:title="Time slot"
+        android:defaultValue="0"
+        android:enabled="false"
+        android:summary="4pm - 10pm (fixed)" />
 </PreferenceScreen>

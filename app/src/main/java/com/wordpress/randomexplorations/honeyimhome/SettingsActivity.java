@@ -33,6 +33,7 @@ public class SettingsActivity extends PreferenceActivity {
 
             // Load the preferences from an XML resource
             addPreferencesFromResource(R.xml.preferences);
+            this.getPreferenceScreen().setTitle("Settings");
         }
 
         /*
