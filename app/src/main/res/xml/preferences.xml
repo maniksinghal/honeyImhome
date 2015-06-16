@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <EditTextPreference
+        android:key="phone_number"
+        android:title="Phone Number"
+        android:defaultValue="9886736667" />
+    <ListPreference
+        android:key="paired_devices"
+        android:title="Bluetooth Device"
+        android:entries="@array/paired_devices"
+        android:entryValues="@array/paired_devices_values"
+        android:defaultValue="hahaha" />
+    <EditTextPreference
+        android:key="connect_message"
+        android:title="Message on Connect"
+        android:defaultValue="Leaving office" />
+    <EditTextPreference
+        android:key="disconnect_message"
+        android:title="Message on disconnect"
+        android:defaultValue="Reached home" />
+</PreferenceScreen>

@@ -1,0 +1,17 @@
+<resources>
+    <string name="app_name">Honey I\'m Home</string>
+
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+    <string-array name="paired_devices">
+        <item>Car stereo</item>
+        <item>Home speaker</item>
+        <item>Laptop</item>
+    </string-array>
+    <string-array name="paired_devices_values">
+        <item>Car stereo</item>
+        <item>Home speaker</item>
+        <item>Laptop</item>
+    </string-array>
+    <string name="title_activity_settings">SettingsActivity</string>
+</resources>
