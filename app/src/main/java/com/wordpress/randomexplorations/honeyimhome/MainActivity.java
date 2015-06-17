@@ -1,11 +1,19 @@
 package com.wordpress.randomexplorations.honeyimhome;
 
+import android.app.IntentService;
+import android.content.Context;
 import android.content.Intent;
+import android.media.AudioManager;
+import android.speech.tts.TextToSpeech;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
+
+import java.util.HashMap;
+import java.util.Locale;
 
 
 public class MainActivity extends ActionBarActivity {
@@ -43,6 +51,8 @@ public class MainActivity extends ActionBarActivity {
             Intent i = new Intent(this, SettingsActivity.class);
             startActivityForResult(i, 0);
             return true;
+        } else if (id == R.id.action_test) {
+            //test_class t = new test_class(getApplicationContext());
         }
 
         return super.onOptionsItemSelected(item);
