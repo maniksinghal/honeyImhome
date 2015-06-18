@@ -4,6 +4,7 @@ import android.app.IntentService;
 import android.content.Context;
 import android.content.Intent;
 import android.media.AudioManager;
+import android.preference.PreferenceManager;
 import android.speech.tts.TextToSpeech;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
@@ -52,7 +53,15 @@ public class MainActivity extends ActionBarActivity {
             startActivityForResult(i, 0);
             return true;
         } else if (id == R.id.action_test) {
-            //test_class t = new test_class(getApplicationContext());
+            String str =
+                    PreferenceManager.getDefaultSharedPreferences(this).getString(
+                            getString(R.string.test_message), null);
+            if (str != null) {
+                Intent i = new Intent(this, MessagePlayService.class);
+                i.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_MESSAGE_TO_PLAY);
+                i.putExtra(MyReceiver.EXTRA_VALUE, str);
+                MyReceiver.startWakefulService(this, i);
+            }
         }
 
         return super.onOptionsItemSelected(item);

@@ -1,27 +1,50 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
     <EditTextPreference
-        android:key="phone_number"
-        android:title="Phone Number"
-        android:defaultValue="9886736667" />
+        android:key="@string/my_name"
+        android:title="My pronounciable name"
+        android:defaultValue="Manik" />
+    <EditTextPreference
+        android:key="@string/hubby_name"
+        android:title="Hubby's pronounciable name"
+        android:defaultValue="Mayha" />  <!-- Meha  -->
+    <EditTextPreference
+        android:key="@string/hubby_phone_number"
+        android:title="Hubby's Phone Number"
+        android:defaultValue="+91xxxxxxxx" />
     <ListPreference
-        android:key="paired_devices"
-        android:title="Bluetooth Device"
+        android:key="@string/paired_devices"
+        android:title="Car stereo bluetooth device"
         android:entries="@array/paired_devices"
         android:entryValues="@array/paired_devices_values"
-        android:defaultValue="hahaha" />
+        android:defaultValue="Not-set" />
     <EditTextPreference
-        android:key="connect_message"
-        android:title="Message on Connect"
-        android:defaultValue="Leaving office" />
+        android:key="@string/connect_message"
+        android:title="Message on stereo connect"
+        android:defaultValue="Leaving office right now. What's ur status?" />
     <EditTextPreference
-        android:key="disconnect_message"
-        android:title="Message on disconnect"
+        android:key="@string/disconnect_message"
+        android:title="Message on stereo disconnect"
         android:defaultValue="Reached home" />
     <EditTextPreference
-        android:key="time_slot"
+        android:key="@string/time_slot"
         android:title="Time slot"
-        android:defaultValue="0"
+        android:defaultValue="After 4pm on weekdays (fixed)"
         android:enabled="false"
-        android:summary="4pm - 10pm (fixed)" />
+        android:summary="After 4pm on weekdays (fixed)" />
+    <EditTextPreference
+        android:key="@string/test_message"
+        android:title="Test message"
+        android:defaultValue="This is test message"
+        android:summary="Message to play on speak-out" />
+    <CheckBoxPreference
+        android:key="@string/always_speak_out"
+        android:title="Incoming Hubby's messages"
+        android:summaryOff="Speaking only when connected to car stereo"
+        android:summaryOn="Always speaking out"  />
+    <CheckBoxPreference
+        android:key="@string/voice_call_stream"
+        android:title="Speaking audio"
+        android:summaryOff="Using Android voice call stream (car stereo)"
+        android:summaryOn="Using Android music stream" />
 </PreferenceScreen>

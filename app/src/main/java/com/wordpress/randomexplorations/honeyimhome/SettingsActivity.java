@@ -7,6 +7,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.preference.EditTextPreference;
 import android.preference.ListPreference;
+import android.preference.Preference;
 import android.preference.PreferenceActivity;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
@@ -18,10 +19,12 @@ import android.view.MenuItem;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 
-public class SettingsActivity extends PreferenceActivity {
+public class SettingsActivity extends PreferenceActivity implements
+        SharedPreferences.OnSharedPreferenceChangeListener {
 
     SettingsFragment sf = null;
 
@@ -42,7 +45,7 @@ public class SettingsActivity extends PreferenceActivity {
         public void update_bt_list() {
 
             getFragmentManager().executePendingTransactions();
-            ListPreference lp = (ListPreference)this.findPreference("paired_devices");
+            ListPreference lp = (ListPreference)this.findPreference(getString(R.string.paired_devices));
 
             BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
             Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
@@ -64,13 +67,19 @@ public class SettingsActivity extends PreferenceActivity {
         public void update_view(Context context) {
 
             SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(context);
-            ListPreference lp = (ListPreference)this.findPreference("paired_devices");
-            EditTextPreference ep = (EditTextPreference)this.findPreference("phone_number");
+            ListPreference lp = (ListPreference)this.findPreference(getString(R.string.paired_devices));
 
-            lp.setSummary(pref.getString("paired_devices", "ERROR!!"));
-            ep.setSummary(pref.getString("phone_number", "ERROR!!"));
+            Map<String,?> keys = pref.getAll();
 
+            for(Map.Entry<String,?> entry : keys.entrySet()){
+                Preference pr = this.findPreference(entry.getKey());
+                if (pr instanceof EditTextPreference) {
+                    EditTextPreference etp = (EditTextPreference)pr;
+                    pr.setSummary(etp.getText());
+                }
+            }
 
+            lp.setSummary(pref.getString(getString(R.string.paired_devices), "ERROR!!"));
         }
     }
 
@@ -88,5 +97,26 @@ public class SettingsActivity extends PreferenceActivity {
 
         sf.update_bt_list();
         sf.update_view(this.getApplicationContext());
+    }
+
+    protected void onResume() {
+        super.onResume();
+        PreferenceManager.getDefaultSharedPreferences(this)
+                .registerOnSharedPreferenceChangeListener(this);
+    }
+
+    protected void onPause() {
+        super.onPause();
+        PreferenceManager.getDefaultSharedPreferences(this)
+                .unregisterOnSharedPreferenceChangeListener(this);
+    }
+
+    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences,
+                                          String key) {
+        Preference pref = this.findPreference(key);
+        if (pref instanceof EditTextPreference) {
+            EditTextPreference etp = (EditTextPreference) pref;
+            pref.setSummary(etp.getText());
+        }
     }
 }
