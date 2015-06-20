@@ -4,4 +4,7 @@
     <item android:id="@+id/action_settings" android:title="@string/action_settings"
         android:orderInCategory="100" app:showAsAction="never" />
     <item android:id="@+id/action_test" android:title="Speak test message" />
+    <item android:id="@+id/action_start_sco" android:title="Start SCO" />
+    <item android:id="@+id/action_fetch_weather" android:title="Fetch Weather" />
+    <item android:id="@+id/action_fetch_news" android:title="Fetch News" />
 </menu>

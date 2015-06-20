@@ -22,9 +22,26 @@ public class MyReceiver extends WakefulBroadcastReceiver {
 
     public static final String EXTRA_PURPOSE = "com.wordpress.randomexplorations.honeyimhome.purpose";
     public static final String EXTRA_VALUE = "com.wordpress.randomexplorations.honeyimhome.play_message";
+    public static final String EXTRA_IS_WEATHER_UPDATE =
+            "com.wordpress.randomexplorations.honeyimhome.weather_update";
+    public static final String EXTRA_IS_NEWS_UPDATE =
+            "com.wordpress.randomexplorations.honeyimhome.news_update";
+
+    // Intent does not have a wakelock
+    // Used by internally generated intents in Jarvis
+    public static final String EXTRA_NON_WAKEFUL = "com.wordpress.randomexplorations.honeyimhome.non_wakeful";
+
+    // Play the message with this intent even if not connected to car.
+    // Used by internally generated messages.
+    public static final String EXTRA_FORCE_PLAY = "com.wordpress.randomexplorations.honeyimhome.force_play";
 
     public static final int EXTRA_PURPOSE_INVALID = 0;
     public static final int EXTRA_PURPOSE_MESSAGE_TO_PLAY = 1;
+    public static final int EXTRA_PURPOSE_CAR_CONNECT = 2;
+    public static final int EXTRA_PURPOSE_CAR_DISCONNECT = 3;
+    public static final int EXTRA_PURPOSE_START_SCO = 4;
+    public static final int EXTRA_PURPOSE_FETCH_WEATHER = 5;
+    public static final int EXTRA_PURPOSE_FETCH_NEWS = 6;
 
     public static final String AM_IN_CAR = "com.wordpress.randomexplorations.honeyimhome.am_in_car";
 
@@ -88,22 +105,14 @@ public class MyReceiver extends WakefulBroadcastReceiver {
 
         // Right now we process message only from our hubby
         String paired_phone =
-                prefs.getString(thisContext.getString(R.string.hubby_phone_number), "0000");
+                prefs.getString(context.getString(R.string.hubby_phone_number), "0000");
         if (!PhoneNumberUtils.compare(paired_phone, senderNum)) {
             Log.d("this", "Message from " + senderNum + ". Discarded as not matching with " + paired_phone);
             return;
         }
 
-        boolean am_in_car = prefs.getBoolean(AM_IN_CAR, false);
-        if (!am_in_car && !prefs.getBoolean(
-                thisContext.getString(R.string.always_speak_out), false)) {
-            // Not in car, can read message by myself.
-            return;
-        }
-
         String message_to_play = null;
-        String hubby = prefs.getString(
-                thisContext.getString(R.string.hubby_name), null);
+        String hubby = prefs.getString(thisContext.getString(R.string.hubby_name), null);
         if (hubby == null) {
             message_to_play = "Received message";
         } else {
@@ -113,7 +122,7 @@ public class MyReceiver extends WakefulBroadcastReceiver {
         message_to_play += " " + message;
 
         // Time to play it
-        Intent i = new Intent(context, MessagePlayService.class);
+        Intent i = new Intent(context, Jarvis.class);
         i.putExtra(EXTRA_PURPOSE, EXTRA_PURPOSE_MESSAGE_TO_PLAY);
         i.putExtra(EXTRA_VALUE, message_to_play);
         startWakefulService(context, i);
@@ -127,25 +136,23 @@ public class MyReceiver extends WakefulBroadcastReceiver {
         String bt_device = prefs.getString(thisContext.getString(R.string.paired_devices), "0000");
         Log.d("this", "Stored device is: " + bt_device);
 
-        String message = null;
+
         BluetoothDevice bt = null;
         boolean connected = false;
         String action = intent.getAction();
         if(BluetoothDevice.ACTION_ACL_CONNECTED.equals(action)){
             //Do something with bluetooth device connection
             bt = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-            message = prefs.getString(thisContext.getString(R.string.connect_message), "connected");
             Log.d("this", "Some device connected: " + bt.getName());
             connected = true;
 
         } else if (BluetoothDevice.ACTION_ACL_DISCONNECTED.equals(action)){
             //Do something with bluetooth device disconnection
             bt = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-            message = prefs.getString(thisContext.getString(R.string.disconnect_message), "disconnected");
             Log.d("this", "Some device disconnected: " + bt.getName());
         }
 
-        if (bt != null && message != null && bt_device.equals(bt.getName())) {
+        if (bt != null  && bt_device.equals(bt.getName())) {
             // Found a valid intent
 
             SharedPreferences.Editor ed = prefs.edit();
@@ -153,42 +160,13 @@ public class MyReceiver extends WakefulBroadcastReceiver {
             ed.commit();
 
             // Prepare a default greeting message
-            Intent in = new Intent(context, MessagePlayService.class);
-            in.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_MESSAGE_TO_PLAY);
-            message = "Your phone is now connnected to car stereo.";
-            in.putExtra(MyReceiver.EXTRA_VALUE, message);
-
-            // Check if its correct time of day to respond to these events
-            Calendar cal = Calendar.getInstance();
-            int hours = cal.get(Calendar.HOUR_OF_DAY);
-            int day = cal.get(Calendar.DAY_OF_WEEK);
-            switch(day) {
-                case Calendar.SUNDAY:
-                case Calendar.SATURDAY:
-                    // Weekends.. ignore
-                    Log.d("this", "Its a weekend.. false alarm");
-                    startWakefulService(context, in);
-                    return;
+            String greeting_message = null;
+            Intent in = new Intent(context, Jarvis.class);
+            if (connected) {
+                in.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_CAR_CONNECT);
+            } else {
+                in.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_CAR_DISCONNECT);
             }
-            if (hours < 16) {
-                // who leaves office before 4pm??
-                Log.d("this", "Its not evening.. " + hours + "...false alarm");
-                startWakefulService(context, in);
-                return;
-            }
-
-            Log.d("this", "Its " + hours + " on " + day + " day");
-
-            String phone = prefs.getString("phone_number", "0000");
-            SmsManager smsManager = SmsManager.getDefault();
-            smsManager.sendTextMessage(phone, null, message, null, null);
-            Log.d("this", "Sent SMS for message: '" + message + "' to " + phone + ".");
-
-            message = "Informing ";
-            message += prefs.getString(context.getString(R.string.hubby_name), null);
-            message += " that you are leaving office";
-
-            in.putExtra(MyReceiver.EXTRA_VALUE, message);
             startWakefulService(context, in);
         }
 

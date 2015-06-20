@@ -56,13 +56,28 @@ public class MainActivity extends ActionBarActivity {
             String str =
                     PreferenceManager.getDefaultSharedPreferences(this).getString(
                             getString(R.string.test_message), null);
+            Log.d("this", "MainActivity: Speaking " + str);
             if (str != null) {
-                Intent i = new Intent(this, MessagePlayService.class);
+                Intent i = new Intent(this, Jarvis.class);
                 i.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_MESSAGE_TO_PLAY);
                 i.putExtra(MyReceiver.EXTRA_VALUE, str);
                 MyReceiver.startWakefulService(this, i);
             }
+        } else if (id == R.id.action_start_sco) {
+            Intent i = new Intent(this, Jarvis.class);
+            i.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_START_SCO);
+            MyReceiver.startWakefulService(this, i);
+
+        } else if (id == R.id.action_fetch_weather) {
+            Intent i = new Intent(this, Jarvis.class);
+            i.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_FETCH_WEATHER);
+            MyReceiver.startWakefulService(this, i);
+        } else if (id == R.id.action_fetch_news) {
+            Intent i = new Intent(this, Jarvis.class);
+            i.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_FETCH_NEWS);
+            MyReceiver.startWakefulService(this, i);
         }
+
 
         return super.onOptionsItemSelected(item);
     }

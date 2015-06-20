@@ -33,6 +33,11 @@
         android:enabled="false"
         android:summary="After 4pm on weekdays (fixed)" />
     <EditTextPreference
+        android:key="@string/welcome_message"
+        android:title="Welcome message on car stereo connect"
+        android:defaultValue="Your phone is now connected to the car stereo."
+        android:summary="Message to play when car stereo is connected" />
+    <EditTextPreference
         android:key="@string/test_message"
         android:title="Test message"
         android:defaultValue="This is test message"
@@ -43,8 +48,26 @@
         android:summaryOff="Speaking only when connected to car stereo"
         android:summaryOn="Always speaking out"  />
     <CheckBoxPreference
-        android:key="@string/voice_call_stream"
-        android:title="Speaking audio"
-        android:summaryOff="Using Android voice call stream (car stereo)"
-        android:summaryOn="Using Android music stream" />
+        android:key="@string/bluetooth_sco"
+        android:title="Bluetooth SCO"
+        android:summaryOff="Using device audio stream"
+        android:summaryOn="Use bluetooth SCO for audio" />
+    <ListPreference
+        android:dependency="@string/bluetooth_sco"
+        android:key="@string/sco_mode"
+        android:title="Bluetoooth SCO mode to use"
+        android:entries="@array/sco_modes"
+        android:entryValues="@array/sco_mode_values"
+        android:defaultValue="2" />  <!-- Default AudioManager.MODE_IN_CALL -->
+    <CheckBoxPreference
+        android:key="@string/weather_update"
+        android:title="Provide weather update"
+        android:summaryOff="Weather update turned off"
+        android:summaryOn="Providing weather update in the morning" />
+    <EditTextPreference
+        android:dependency="@string/weather_update"
+        android:key="@string/weather_woeid"
+        android:title="WOEID"
+        android:defaultValue="29228812"
+        android:summary="Yahoo weather service WOEID" />
 </PreferenceScreen>
