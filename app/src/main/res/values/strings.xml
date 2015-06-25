@@ -19,6 +19,8 @@
     <string name="sco_mode">SCO mode</string>
     <string name="weather_update">Weather update</string>
     <string name="weather_woeid">woeid</string>
+    <string name="office_wifi">office-wifi</string>
+    <string name="car_disconnect_tone">car_disconnect_tone</string>
     <string-array name="paired_devices">
         <item>Car stereo</item>
         <item>Home speaker</item>

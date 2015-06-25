@@ -60,6 +60,7 @@ public class MessageSpeaker implements
                 msg_speaker_errored = true;
 
                 if (scoMgr != null) {
+                    context.unregisterReceiver(scoMgr);
                     scoMgr = null;
                 }
 
@@ -75,7 +76,7 @@ public class MessageSpeaker implements
 
         private boolean connection_attempt_started = false;
 
-        public void startManager(Context context) {
+        public void startManager(Context ctx) {
             IntentFilter in = new IntentFilter();
             in.addAction(AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED);
             context.registerReceiver(this, in);
@@ -97,6 +98,8 @@ public class MessageSpeaker implements
                             connection_attempt_started = true;
                         }
                         break;
+
+
                     case AudioManager.SCO_AUDIO_STATE_CONNECTED:
                         Log.d("this", "SCO connected while waiting_for_sco: " + waiting_for_sco +
                              " waiting_for_tts: " + waiting_for_tts);
@@ -109,24 +112,39 @@ public class MessageSpeaker implements
 
                         if (waiting_for_sco) {
                             waiting_for_sco = false;
+
+                            AudioManager am = (AudioManager)context.getSystemService(Context.AUDIO_SERVICE);
+                            if (!connection_attempt_started) {
+                                // SCO was already started. Start from your end too so that
+                                // if the other app disconnects, we still have it connected.
+                                connection_attempt_started = true;
+                                am.startBluetoothSco();
+                                am.setMode(AudioManager.MODE_IN_CALL);
+                                am.setBluetoothScoOn(true);
+
+                            }
+
                             if (!waiting_for_tts && !msg_speaker_errored) {
+
                                 // TTS is also ready
                                 ready = true;
-                                Log.d("this", "Sco: Processing intent");
                                 jarvis.processIntent();
+
                             } else if (msg_speaker_errored) {
-                                // TTS errored out
+                                // TTS errored out.. Stop SCO
                                 Log.d("this", "Sco: Cleaning up SCO and intent");
-                                AudioManager am = (AudioManager)context.getSystemService(Context.AUDIO_SERVICE);
                                 am.stopBluetoothSco();
                                 jarvis.cleanupIntent();
                             }
                         }
                         break;
+
+
                     case AudioManager.SCO_AUDIO_STATE_DISCONNECTED:
                     case AudioManager.SCO_AUDIO_STATE_ERROR:
                         Log.d("this", "SCO disconnect/error waiting_sco: " + waiting_for_sco +
                                 " waiting_tts: " + waiting_for_tts + " conn_attempt: " + connection_attempt_started);
+                        AudioManager am = (AudioManager)context.getSystemService(Context.AUDIO_SERVICE);
                         if (connection_attempt_started && waiting_for_sco) {
                             waiting_for_sco = false;
                             msg_speaker_errored = true;
@@ -136,15 +154,20 @@ public class MessageSpeaker implements
                                 timer = null;
                             }
 
+                            context.unregisterReceiver(this);
+                            scoMgr = null;
 
                             if (!waiting_for_tts) {
                                 jarvis.cleanupIntent();
                             }
 
-
-                            // Keep waiting_for_sco false so that tts does not fire the intent.
+                        } else if (waiting_for_sco) {
+                            connection_attempt_started = true;
+                            am.stopBluetoothSco();  // Stop before start todo: see if it works
+                            am.startBluetoothSco();
                         }
                         break;
+
                     default:
                         Log.d("this", "Unknown SCO state!!");
                         break;
@@ -160,15 +183,33 @@ public class MessageSpeaker implements
     @Override
     public void onInit(int status) {
 
+        boolean tts_errored = false;
+
+        waiting_for_tts = false;
+
         if (status != TextToSpeech.SUCCESS) {
             Log.d("this", "TextToSpeech init failed: " + status);
-            jarvis.cleanupIntent();
-            return;
+            tts_errored = true;
         }
 
-        if (tts.isLanguageAvailable(Locale.ENGLISH) != TextToSpeech.LANG_AVAILABLE) {
+        if (!tts_errored && tts.isLanguageAvailable(Locale.ENGLISH) != TextToSpeech.LANG_AVAILABLE) {
             Log.d("this", "TextToSpeech Locale not available");
-            jarvis.cleanupIntent();
+            tts_errored = true;
+            tts.shutdown();
+        }
+
+        if (tts_errored) {
+            msg_speaker_errored = true;
+            if (!waiting_for_sco) {
+
+                if (scoMgr != null) {
+                    // TTS errored while sco initialized.
+                    context.unregisterReceiver(scoMgr);
+                    scoMgr = null;
+                }
+
+                jarvis.cleanupIntent();
+            }
             return;
         }
 
@@ -188,11 +229,11 @@ public class MessageSpeaker implements
         }
 
         myHashAlarm.put(TextToSpeech.Engine.KEY_PARAM_STREAM,
-                    audio_stream);
+                audio_stream);
 
         tts.setOnUtteranceCompletedListener(this);  // callback when speech is complete.
-        tts.setSpeechRate((float) 0.7);
-        tts.setPitch((float)0.8);
+        //tts.setSpeechRate((float) 0.7);
+        //tts.setPitch((float)0.8);
 
         // Check if SCO is also ready
         waiting_for_tts = false;
@@ -210,8 +251,10 @@ public class MessageSpeaker implements
 
     public void speak(String message) {
         if (ready) {
+            Log.d("this", "TTS: Speaking: " + message);
             tts.speak(message, TextToSpeech.QUEUE_ADD, myHashAlarm);
         } else {
+            Log.d("this", "MessageSpeaker: TTS not ready");
             jarvis.cleanupIntent();
         }
     }
@@ -263,33 +306,24 @@ public class MessageSpeaker implements
 
         if (am.isBluetoothScoAvailableOffCall()) {
 
+            int timer_interval = 8000;  // msec
+
             // Switch to bluetooth SCO as well
             scoMgr = new BluetoothScoManager();
             waiting_for_sco = true;
 
-            Log.d("this", "Attempting Sco with mode " + mode);
+            Log.d("this", "Attempting Sco connect with timer: " + timer_interval);
+            scoMgr.startManager(context);
 
-            try {
-                am.setMode(mode);
-                am.setBluetoothScoOn(true);
-                am.startBluetoothSco();   // This can throw exception if bluetooth device is not connected
-                scoMgr.startManager(context);
-            } catch (Exception e) {
-                // Sco cannot be initialized.
-                Log.d("this", "SCO cannot be initialized. Continuing with bare TTS");
-                waiting_for_sco = false;
-                scoMgr = null;
-                return false;
-            }
+            // Start timer to monitor SCO receiver response
+            timer = new Timer();
+            timerTask = new TimerTasks();
+
+            timer.schedule(timerTask, timer_interval);
+
         } else {
             return false;
         }
-
-        // Start timer
-        timer = new Timer();
-        timerTask = new TimerTasks();
-
-        timer.schedule(timerTask, 5000);
 
         return true;
 

@@ -5,6 +5,10 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.provider.Telephony;
@@ -30,6 +34,14 @@ public class MyReceiver extends WakefulBroadcastReceiver {
     // Intent does not have a wakelock
     // Used by internally generated intents in Jarvis
     public static final String EXTRA_NON_WAKEFUL = "com.wordpress.randomexplorations.honeyimhome.non_wakeful";
+
+    // Wifi management
+    public static final String EXTRA_LAST_WIFI_NAME = "com.wordpress.randomexplorations.honeyimhome.last_wifi_name";
+    // boolean flag to check if wifi was last connected or not
+    public static final String EXTRA_LAST_WIFI_CONNECTED = "com.wordpress.randomexplorations.honeyimhome.last_wifi_state";
+    public static final String EXTRA_LAST_WIFI_EVENT_TIMESTAMP =
+            "com.wordpress.randomexplorations.honeyimhome.last_wifi_event_timestamp";
+
 
     // Play the message with this intent even if not connected to car.
     // Used by internally generated messages.
@@ -63,7 +75,71 @@ public class MyReceiver extends WakefulBroadcastReceiver {
             handle_bluetooth_actions(context, intent, prefs);
         } else if (Telephony.Sms.Intents.SMS_RECEIVED_ACTION.equals(action)) {
             handle_sms_actions(context, intent, prefs);
+        } else if (WifiManager.SUPPLICANT_CONNECTION_CHANGE_ACTION.equals(action)) {
+            handle_wifi_actions(context, intent, prefs);
         }
+    }
+
+    private void handle_wifi_actions(Context context, Intent intent, SharedPreferences prefs) {
+
+        Calendar cal = Calendar.getInstance();
+        long time_in_mins = cal.get(Calendar.DAY_OF_MONTH) * 24 * 60 +
+                cal.get(Calendar.HOUR_OF_DAY) * 60 +
+                cal.get(Calendar.MINUTE);
+
+        boolean connected = intent.getBooleanExtra(WifiManager.EXTRA_SUPPLICANT_CONNECTED, false);
+        if (!connected) {
+            Log.d("this", "Some wifi disabled");
+            SharedPreferences.Editor ed = prefs.edit();
+            ed.putBoolean(EXTRA_LAST_WIFI_CONNECTED, false);
+            ed.putLong(EXTRA_LAST_WIFI_EVENT_TIMESTAMP, time_in_mins);
+            ed.commit();
+        } else {
+
+            SharedPreferences.Editor ed = prefs.edit();
+            ed.putBoolean(EXTRA_LAST_WIFI_CONNECTED, true);
+            ed.putLong(EXTRA_LAST_WIFI_EVENT_TIMESTAMP, time_in_mins);
+
+            //String ssid = info.getSSID();
+            String ssid = null;
+            try {
+                // Wait upto 10 seconds
+                int i;
+                for (i = 0; i < 20; i++) {
+                    Thread.sleep(500);
+                    WifiManager wManager = (WifiManager)context.getSystemService(Context.WIFI_SERVICE);
+                    ssid = wManager.getConnectionInfo().getSSID();
+                    if (ssid != null && !ssid.equals("0x") && !ssid.isEmpty()) {
+                        break;
+                    }
+                }
+
+                if (i == 20) {
+                    // What the hell!!
+                    ssid = "Timed-out retrieving SSID";
+                }
+
+                Log.d("this", "Waited for " + i*500 + " milliseconds to get: " + ssid);
+
+            } catch (Exception e) {
+                Log.d("this", "Broadcast receiver thread could not sleep for long!! " + e.getMessage());
+            }
+
+
+
+            // ssid is returned in quotes if it can be decoded as UTF-8, "office" instead of office
+            // Remove the quotes if present
+            if (ssid.startsWith("\"") && ssid.endsWith("\"")){
+                ssid = ssid.substring(1, ssid.length()-1);
+            }
+
+            ed.putString(EXTRA_LAST_WIFI_NAME, ssid);
+            ed.commit();
+            Log.d("this", "Some wifi enabled now: " + ssid);
+        }
+
+        // Right now there is no need of passing this event to Jarvis.
+
     }
 
     private void handle_sms_actions(Context context, Intent intent, SharedPreferences prefs) {
@@ -116,7 +192,7 @@ public class MyReceiver extends WakefulBroadcastReceiver {
         if (hubby == null) {
             message_to_play = "Received message";
         } else {
-            message_to_play = hubby + "says";
+            message_to_play = hubby + " says";
         }
 
         message_to_play += " " + message;

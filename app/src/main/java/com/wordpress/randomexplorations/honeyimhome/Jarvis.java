@@ -1,9 +1,15 @@
 package com.wordpress.randomexplorations.honeyimhome;
 
 import android.app.IntentService;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.media.AudioManager;
+import android.media.Ringtone;
+import android.media.RingtoneManager;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+import android.net.Uri;
 import android.preference.PreferenceManager;
 import android.telephony.SmsManager;
 import android.util.Log;
@@ -19,6 +25,7 @@ public class Jarvis extends IntentService {
     private Intent runningIntent = null;  // currently running intent
     private List<Intent> workList = null;
     private boolean connected_to_car = false;
+    private String current_wifi_ssid = null;
 
 
     public Jarvis() {
@@ -28,13 +35,35 @@ public class Jarvis extends IntentService {
     @Override
     public void onCreate() {
 
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        Context context = getApplicationContext();
+
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
 
         speaker = new MessageSpeaker(this, getApplicationContext());
         runningIntent = null;
         workList = new ArrayList<>();
         connected_to_car = prefs.getBoolean(MyReceiver.AM_IN_CAR, false);
         Log.d("this", "Service created with car connection: " + connected_to_car);
+
+        // Check wifi connectivity
+        // Need to handle the case where sharedPreferences say Wifi is connected but we
+        // are actually disconnected (phone power down during connected, and power-up during disconnected
+        ConnectivityManager connManager = (ConnectivityManager)getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo nInfo = connManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
+        if (nInfo != null && nInfo.isConnected()) {
+            // We are connected to some wifi.
+            // Nothing to do here as we would be receiving events for this
+        } else {
+            // Wifi is disconnected
+            boolean wifi_state_connected = prefs.getBoolean(MyReceiver.EXTRA_LAST_WIFI_CONNECTED, false);
+            if (wifi_state_connected) {
+                // Set state = wifi-disconnected.
+                // 0 out the event timestamp, so that we don't treat it as a recent disconnection.
+                SharedPreferences.Editor editor = prefs.edit();
+                editor.putBoolean(MyReceiver.EXTRA_LAST_WIFI_CONNECTED, true);
+                editor.putLong(MyReceiver.EXTRA_LAST_WIFI_EVENT_TIMESTAMP, 0);
+            }
+        }
     }
 
     /*
@@ -136,17 +165,34 @@ public class Jarvis extends IntentService {
     }
 
 
-    private boolean is_weekday_evening() {
+    private boolean leaving_office() {
         Calendar cal = Calendar.getInstance();
+        long cur_time = cal.get(Calendar.DAY_OF_MONTH) * 24 * 60 +
+                cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE);
 
-        if (cal.get(Calendar.DAY_OF_WEEK) != Calendar.SATURDAY &&
-                cal.get(Calendar.DAY_OF_WEEK) != Calendar.SUNDAY &&
-                cal.get(Calendar.HOUR_OF_DAY) > 16) {
-            // >4pm on weekday
-            return true;
-        } else {
-            return false;
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        long last_wifi_event_time = prefs.getLong(MyReceiver.EXTRA_LAST_WIFI_EVENT_TIMESTAMP, 0);
+        boolean wifi_connected = prefs.getBoolean(MyReceiver.EXTRA_LAST_WIFI_CONNECTED, false);
+        String wifi_name = prefs.getString(MyReceiver.EXTRA_LAST_WIFI_NAME, "garbage_value");
+        String office_wifi_name = prefs.getString(getString(R.string.office_wifi), "garbage_value2");
+
+        long time_diff = cur_time - last_wifi_event_time;
+
+        Log.d("this", "LeavingOffice: wifi:" + wifi_name + ", stored_wifi:" + office_wifi_name +
+            ", state_connected:" + wifi_connected + ", time_diff:" + time_diff);
+
+        // We are leaving office if we are still connected to office wifi or we
+        // recently disconnected
+        if (wifi_name.equals(office_wifi_name)) {
+            if (wifi_connected) {
+                return true;
+            } else if (time_diff >= 0 && time_diff < 15) {
+                // We disconnected from office wifi not more than 15 mintues ago
+                return true;
+            }
         }
+
+        return false;
     }
 
     private boolean weather_update_required() {
@@ -176,46 +222,20 @@ public class Jarvis extends IntentService {
 
 
     /*
-    * User just connected to car stereo
+    * User just disconnected from car stereo
     */
     private void disconnected_from_car() {
 
-        int insert_location = 0;
+        // @todo: just beep
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-
-        // Break-up this intent into multiple child intents.
-        // Queue the child intents in the beginning of the workList so they get processed now.
-
-
-        // Check if need to inform Hubby about reaching home
-        if (is_weekday_evening()) {
-            Intent i = new Intent();
-            i.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_MESSAGE_TO_PLAY);
-            i.putExtra(MyReceiver.EXTRA_NON_WAKEFUL, true);
-
-            String phone = prefs.getString(getString(R.string.hubby_phone_number), "0000");
-            String message = prefs.getString(getString(R.string.disconnect_message), "empty");
-            SmsManager smsManager = SmsManager.getDefault();
-            smsManager.sendTextMessage(phone, null, message, null, null);
-
-            message = "Informed ";
-            message += prefs.getString(getString(R.string.hubby_name), null);
-            message += " that you've reached home";
-            i.putExtra(MyReceiver.EXTRA_VALUE, message);
-            workList.add(insert_location, i);
-            insert_location++;
+        Uri notification = Uri.parse(prefs.getString(getString(R.string.car_disconnect_tone), null));
+        if (notification != null) {
+            Ringtone r = RingtoneManager.getRingtone(getApplicationContext(), notification);
+            r.play();
         }
 
-        // add more possible intents here
-
-
         connected_to_car = false;
-        // Keep the car-disconnected intent to hold the wakelock, so that the sub-intents can run
-        // without any issue
-        runningIntent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_INVALID); // now nop
-        workList.add(insert_location, runningIntent);  // re-queue after above intents.
-        runningIntent = null;  // so that it does not get wake-lock-released by cleanupIntent
-        cleanupIntent();  // Cleanup current 'disconnect-from-car' intent and pick up first child-intent
+        cleanupIntent();
         return;
     }
 
@@ -246,7 +266,7 @@ public class Jarvis extends IntentService {
 
         // Check if need to inform Hubby about leaving office
         String message = null;
-        if (is_weekday_evening()) {
+        if (leaving_office()) {
             String phone = prefs.getString(getString(R.string.hubby_phone_number), "0000");
             message = prefs.getString(getString(R.string.connect_message), "empty");
             SmsManager smsManager = SmsManager.getDefault();
@@ -256,6 +276,12 @@ public class Jarvis extends IntentService {
             message += prefs.getString(getString(R.string.hubby_name), null);
             message += " that you're leaving office";
             i.putExtra(MyReceiver.EXTRA_VALUE, message);
+
+            // Make sure we do not look novice sending message again if car restarts.
+            SharedPreferences.Editor editor = prefs.edit();
+            editor.putLong(MyReceiver.EXTRA_LAST_WIFI_EVENT_TIMESTAMP, 0);
+            editor.commit();
+
         } else {
             // Just print a regular welcome message
             message = prefs.getString(getString(R.string.welcome_message), null);

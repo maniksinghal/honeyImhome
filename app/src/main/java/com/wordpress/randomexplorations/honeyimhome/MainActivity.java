@@ -3,7 +3,9 @@ package com.wordpress.randomexplorations.honeyimhome;
 import android.app.IntentService;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.media.AudioManager;
+import android.os.Build;
 import android.preference.PreferenceManager;
 import android.speech.tts.TextToSpeech;
 import android.support.v7.app.ActionBarActivity;
@@ -40,6 +42,42 @@ public class MainActivity extends ActionBarActivity {
         return true;
     }
 
+    private void get_parameters() {
+
+        AudioManager am = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        int mode = am.getMode();
+
+        String output_sample_rate = null;
+        String output_frames_per_buffer = null;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+            output_sample_rate = am.getProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE);
+            output_frames_per_buffer = am.getProperty(AudioManager.PROPERTY_OUTPUT_FRAMES_PER_BUFFER);
+        }
+
+        boolean fixed_volume = false;
+        if (Build.VERSION.SDK_INT >= 21) {
+             fixed_volume = am.isVolumeFixed();
+        }
+
+        boolean a2dp_on = am.isBluetoothA2dpOn();
+        boolean sco_on = am.isBluetoothScoOn();
+
+
+        String message = "mode: " + mode + "\n";
+        message += "output_sample_rate: " + output_sample_rate + "\n";
+        message += "output_frames_per_buffer: " + output_frames_per_buffer + "\n";
+        message += "a2dp: " + a2dp_on + "\n";
+        message += "sco_on: " + sco_on + "\n";
+        message += "fixed_volume: " + fixed_volume + "\n";
+        message += "last connected wifi SSID: " + prefs.getString(MyReceiver.EXTRA_LAST_WIFI_NAME, "<not-found>");
+
+        TextView tv = (TextView)findViewById(R.id.hello_world);
+        tv.setText(message);
+
+        return;
+    }
+
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         // Handle action bar item clicks here. The action bar will
@@ -60,22 +98,28 @@ public class MainActivity extends ActionBarActivity {
             if (str != null) {
                 Intent i = new Intent(this, Jarvis.class);
                 i.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_MESSAGE_TO_PLAY);
+                i.putExtra(MyReceiver.EXTRA_FORCE_PLAY, true);
                 i.putExtra(MyReceiver.EXTRA_VALUE, str);
                 MyReceiver.startWakefulService(this, i);
             }
         } else if (id == R.id.action_start_sco) {
             Intent i = new Intent(this, Jarvis.class);
             i.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_START_SCO);
+            i.putExtra(MyReceiver.EXTRA_FORCE_PLAY, true);
             MyReceiver.startWakefulService(this, i);
 
         } else if (id == R.id.action_fetch_weather) {
             Intent i = new Intent(this, Jarvis.class);
             i.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_FETCH_WEATHER);
+            i.putExtra(MyReceiver.EXTRA_FORCE_PLAY, true);
             MyReceiver.startWakefulService(this, i);
         } else if (id == R.id.action_fetch_news) {
             Intent i = new Intent(this, Jarvis.class);
             i.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_FETCH_NEWS);
+            i.putExtra(MyReceiver.EXTRA_FORCE_PLAY, true);
             MyReceiver.startWakefulService(this, i);
+        } else if (id == R.id.action_get_params) {
+            get_parameters();
         }
 
 
