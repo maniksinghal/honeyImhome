@@ -75,10 +75,31 @@
         android:title="Office WIFI name (SSID)"
         android:defaultValue="office"
         android:summary="Office wifi" />
+    <EditTextPreference
+        android:key="@string/home_wifi"
+        android:title="Home WIFI name (SSID)"
+        android:defaultValue="home"
+        android:summary="Home wifi" />
     <RingtonePreference
         android:key="@string/car_disconnect_tone"
         android:title="Notification sound on disconnect from car stereo"
         android:showSilent="true"
         android:ringtoneType="notification"
         android:summary="(Ringtone not set)" />
+    <RingtonePreference
+        android:key="@string/reminder_tone"
+        android:title="Reminders tone"
+        android:showSilent="true"
+        android:ringtoneType="notification"
+        android:summary="(Ringtone not set)" />
+    <EditTextPreference
+        android:key="@string/week_start_reminder"
+        android:title="Monday morning reminder for office"
+        android:defaultValue=""
+        android:summary="Office wifi" />
+    <EditTextPreference
+        android:key="@string/week_end_reminder"
+        android:title="Friday evening reminder for home"
+        android:defaultValue=""
+        android:summary="Office wifi" />
     </PreferenceScreen>

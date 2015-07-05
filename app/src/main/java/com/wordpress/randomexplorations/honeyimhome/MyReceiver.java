@@ -54,6 +54,7 @@ public class MyReceiver extends WakefulBroadcastReceiver {
     public static final int EXTRA_PURPOSE_START_SCO = 4;
     public static final int EXTRA_PURPOSE_FETCH_WEATHER = 5;
     public static final int EXTRA_PURPOSE_FETCH_NEWS = 6;
+    public static final int EXTRA_PURPOSE_WIFI_STATE_CHANGE = 7;
 
     public static final String AM_IN_CAR = "com.wordpress.randomexplorations.honeyimhome.am_in_car";
 
@@ -75,19 +76,42 @@ public class MyReceiver extends WakefulBroadcastReceiver {
             handle_bluetooth_actions(context, intent, prefs);
         } else if (Telephony.Sms.Intents.SMS_RECEIVED_ACTION.equals(action)) {
             handle_sms_actions(context, intent, prefs);
-        } else if (WifiManager.SUPPLICANT_CONNECTION_CHANGE_ACTION.equals(action)) {
-            handle_wifi_actions(context, intent, prefs);
+        //} else if (WifiManager.SUPPLICANT_CONNECTION_CHANGE_ACTION.equals(action)) {
+          //  handle_wifi_actions(context, intent, prefs);
+        } else if (WifiManager.NETWORK_STATE_CHANGED_ACTION.equals(action)) {
+            NetworkInfo netInfo = intent.getParcelableExtra(WifiManager.EXTRA_NETWORK_INFO);
+            WifiInfo wifiInfo = intent.getParcelableExtra(WifiManager.EXTRA_WIFI_INFO);
+
+            if (netInfo != null && netInfo.isConnected() && wifiInfo != null) {
+                String ssid = wifiInfo.getSSID();
+                handle_wifi_actions(context, true, prefs, ssid);
+            } else if (netInfo != null && netInfo.getState() == NetworkInfo.State.DISCONNECTED) {
+                handle_wifi_actions(context, false, prefs, null);
+            }
         }
     }
 
-    private void handle_wifi_actions(Context context, Intent intent, SharedPreferences prefs) {
+    private void handle_wifi_actions(Context context, boolean connected, SharedPreferences prefs,
+                                     String ssid) {
 
         Calendar cal = Calendar.getInstance();
         long time_in_mins = cal.get(Calendar.DAY_OF_MONTH) * 24 * 60 +
                 cal.get(Calendar.HOUR_OF_DAY) * 60 +
                 cal.get(Calendar.MINUTE);
 
-        boolean connected = intent.getBooleanExtra(WifiManager.EXTRA_SUPPLICANT_CONNECTED, false);
+        boolean was_connected = prefs.getBoolean(EXTRA_LAST_WIFI_CONNECTED, false);
+        /*
+        * When disconnecting, we get an intermediate 'connected' with invalid ssid
+        * This makes us update our last connected ssid to invalid value which causes
+        * malfunctioning further.
+        * Ignore duplicate state updates for now..
+         */
+        if (connected == was_connected) {
+            // Ignore this update
+            return;
+        }
+
+
         if (!connected) {
             Log.d("this", "Some wifi disabled");
             SharedPreferences.Editor ed = prefs.edit();
@@ -100,33 +124,6 @@ public class MyReceiver extends WakefulBroadcastReceiver {
             ed.putBoolean(EXTRA_LAST_WIFI_CONNECTED, true);
             ed.putLong(EXTRA_LAST_WIFI_EVENT_TIMESTAMP, time_in_mins);
 
-            //String ssid = info.getSSID();
-            String ssid = null;
-            try {
-                // Wait upto 10 seconds
-                int i;
-                for (i = 0; i < 20; i++) {
-                    Thread.sleep(500);
-                    WifiManager wManager = (WifiManager)context.getSystemService(Context.WIFI_SERVICE);
-                    ssid = wManager.getConnectionInfo().getSSID();
-                    if (ssid != null && !ssid.equals("0x") && !ssid.isEmpty()) {
-                        break;
-                    }
-                }
-
-                if (i == 20) {
-                    // What the hell!!
-                    ssid = "Timed-out retrieving SSID";
-                }
-
-                Log.d("this", "Waited for " + i*500 + " milliseconds to get: " + ssid);
-
-            } catch (Exception e) {
-                Log.d("this", "Broadcast receiver thread could not sleep for long!! " + e.getMessage());
-            }
-
-
-
             // ssid is returned in quotes if it can be decoded as UTF-8, "office" instead of office
             // Remove the quotes if present
             if (ssid.startsWith("\"") && ssid.endsWith("\"")){
@@ -138,7 +135,13 @@ public class MyReceiver extends WakefulBroadcastReceiver {
             Log.d("this", "Some wifi enabled now: " + ssid);
         }
 
-        // Right now there is no need of passing this event to Jarvis.
+        // We may receive WifiManager.NETWORK_STATE_CHANGE in bulk with toggling states.
+        // But it converges to the final state.
+        // So if we plan to pass this intent to the service, make note of the intermediate toggling
+        // states.
+        Intent i = new Intent(context, Jarvis.class);
+        i.putExtra(EXTRA_PURPOSE, EXTRA_PURPOSE_WIFI_STATE_CHANGE);
+        startWakefulService(context, i);
 
     }
 

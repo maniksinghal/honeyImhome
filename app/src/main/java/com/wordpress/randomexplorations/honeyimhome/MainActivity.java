@@ -69,8 +69,9 @@ public class MainActivity extends ActionBarActivity {
         message += "output_frames_per_buffer: " + output_frames_per_buffer + "\n";
         message += "a2dp: " + a2dp_on + "\n";
         message += "sco_on: " + sco_on + "\n";
-        message += "fixed_volume: " + fixed_volume + "\n";
-        message += "last connected wifi SSID: " + prefs.getString(MyReceiver.EXTRA_LAST_WIFI_NAME, "<not-found>");
+        message += "fixed_volume: " + fixed_volume + "\n\n";
+        message += "last connected wifi SSID: " + prefs.getString(MyReceiver.EXTRA_LAST_WIFI_NAME, "<not-found>") + "\n";
+        message += "wifi connection status: " + prefs.getBoolean(MyReceiver.EXTRA_LAST_WIFI_CONNECTED, false) + "\n";
 
         TextView tv = (TextView)findViewById(R.id.hello_world);
         tv.setText(message);

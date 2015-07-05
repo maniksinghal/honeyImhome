@@ -1,6 +1,9 @@
 package com.wordpress.randomexplorations.honeyimhome;
 
+import android.annotation.TargetApi;
 import android.app.IntentService;
+import android.app.Notification;
+import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -10,13 +13,19 @@ import android.media.RingtoneManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
+import android.os.Build;
+import android.os.Vibrator;
 import android.preference.PreferenceManager;
+import android.support.v4.app.NotificationCompat;
 import android.telephony.SmsManager;
 import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
 
 public class Jarvis extends IntentService {
@@ -27,9 +36,108 @@ public class Jarvis extends IntentService {
     private boolean connected_to_car = false;
     private String current_wifi_ssid = null;
 
+    private boolean wifi_connected = false;
+    private String last_wifi_connected = null;
+
+    private Timer wifi_timer = null;
 
     public Jarvis() {
         super("Jarvis");
+    }
+
+
+    private void show_reminder(String reminder, Uri notification) {
+
+        if (reminder != null) {
+
+            Notification.Builder n = new Notification.Builder(this);
+            n.setContentTitle("Myapp");
+            n.setContentText(reminder);
+            n.setSmallIcon(R.mipmap.ic_launcher);
+            n.setAutoCancel(true);
+            Notification nt = n.build();
+
+            NotificationManager notificationManager =
+                    (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+            notificationManager.notify(0, nt);
+            Log.d("this", "Notifying the message: " + reminder);
+
+            /*
+            // @todo: replace with Notification
+            runningIntent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_MESSAGE_TO_PLAY);
+            runningIntent.putExtra(MyReceiver.EXTRA_VALUE, reminder);
+            runningIntent.putExtra(MyReceiver.EXTRA_FORCE_PLAY, true);
+            play_message(reminder);
+            */
+        }
+
+        if (notification != null) {
+            Vibrator v = (Vibrator)getSystemService(Context.VIBRATOR_SERVICE);
+            Ringtone r = RingtoneManager.getRingtone(getApplicationContext(), notification);
+            r.play();
+            v.vibrate(500);
+        }
+
+    }
+    private void handle_wifi_reminders() {
+
+        Calendar date = Calendar.getInstance();
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+
+        Uri notification = Uri.parse(prefs.getString(getString(R.string.reminder_tone), null));
+
+
+        String reminder = null;
+
+        // Monday morning reminders
+        if (date.get(Calendar.DAY_OF_WEEK) == Calendar.MONDAY && !wifi_connected) {
+            String home_wifi = prefs.getString(getString(R.string.home_wifi), null);
+            if (home_wifi != null && home_wifi.equals(last_wifi_connected)) {
+                if (date.get(Calendar.HOUR_OF_DAY) <= 11) {
+                    // Monday morning, disconnected from home-wifi => leaving for office
+                    reminder = prefs.getString(getString(R.string.week_start_reminder), null);
+                    show_reminder(reminder, notification);
+                }
+            }
+
+        } else if (date.get(Calendar.DAY_OF_WEEK) == Calendar.FRIDAY && !wifi_connected) {
+            String office_wifi = prefs.getString(getString(R.string.office_wifi), null);
+            if (office_wifi != null && office_wifi.equals(last_wifi_connected)) {
+                if (date.get(Calendar.HOUR_OF_DAY) >= 15) {
+                    // Friday evening, disconnected from office-wifi => leaving for home
+                    reminder = prefs.getString(getString(R.string.week_end_reminder), null);
+                    show_reminder(reminder, notification);
+                }
+            }
+
+        }
+    }
+
+    /*
+    * Timer run whenever wifi-state change event is received to
+    * wait for multiple wifi events to stablize, and act on only the
+    * last received event.
+     */
+    private class wifi_state_converger extends TimerTask {
+
+        public void run() {
+
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+            boolean new_state = prefs.getBoolean(MyReceiver.EXTRA_LAST_WIFI_CONNECTED, false);
+            String new_wifi_name = prefs.getString(MyReceiver.EXTRA_LAST_WIFI_NAME, null);
+
+            wifi_timer = null;
+
+            wifi_connected = new_state;
+            last_wifi_connected = new_wifi_name;
+            Log.d("this", "Logged wifi-state change!! connected:" + new_state + ", name: " + new_wifi_name);
+
+            // Todo: handle wifi-state changes
+            handle_wifi_reminders();
+            cleanupIntent();
+
+        }
+
     }
 
     @Override
@@ -62,8 +170,12 @@ public class Jarvis extends IntentService {
                 SharedPreferences.Editor editor = prefs.edit();
                 editor.putBoolean(MyReceiver.EXTRA_LAST_WIFI_CONNECTED, true);
                 editor.putLong(MyReceiver.EXTRA_LAST_WIFI_EVENT_TIMESTAMP, 0);
+                editor.commit();
             }
         }
+
+        wifi_connected = prefs.getBoolean(MyReceiver.EXTRA_LAST_WIFI_CONNECTED, false);
+        last_wifi_connected = prefs.getString(MyReceiver.EXTRA_LAST_WIFI_NAME, null);
     }
 
     /*
@@ -77,6 +189,24 @@ public class Jarvis extends IntentService {
     public int onStartCommand(Intent intent, int flags, int startId) {
 
         Log.d("this", "Received intent: " + intent.getIntExtra(MyReceiver.EXTRA_PURPOSE, -1));
+
+        // Process Exceptions...
+
+        /*
+        * 1. When we get a wifi-state change event, we start a timer for event to converge.
+        * During this timer, we are holding the intent, but we want to allow other wifi-state
+        * change intents to get processed.
+        */
+        int purpose = intent.getIntExtra(MyReceiver.EXTRA_PURPOSE, -1);
+        if (purpose == MyReceiver.EXTRA_PURPOSE_WIFI_STATE_CHANGE) {
+            if (runningIntent != null && wifi_timer != null) {
+                // Free-up previous WIFI_STATE_CHANGE event and schedule this one at top of queue
+                workList.add(0, intent);
+                cleanupIntent();
+                return START_NOT_STICKY;
+            }
+        }
+
         workList.add(intent);
         if (runningIntent == null) {
             cleanupIntent();
@@ -350,6 +480,20 @@ public class Jarvis extends IntentService {
 
     }
 
+    public void handle_wifi_state_change() {
+
+        int interval = 2000; // 2 seconds
+
+        if (wifi_timer != null) {
+            // Event converger timer is running, restart it
+            wifi_timer.cancel();
+        }
+
+        wifi_timer = new Timer();
+        wifi_timer.schedule(new wifi_state_converger(), interval);
+
+    }
+
     public void processIntent() {
 
         SharedPreferences prefs =
@@ -400,6 +544,10 @@ public class Jarvis extends IntentService {
 
             case MyReceiver.EXTRA_PURPOSE_FETCH_NEWS:
                 new NewsUpdate(this).execute(null, null, null);
+                break;
+
+            case MyReceiver.EXTRA_PURPOSE_WIFI_STATE_CHANGE:
+                handle_wifi_state_change();
                 break;
 
             default:

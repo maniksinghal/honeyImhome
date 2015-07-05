@@ -20,6 +20,10 @@
     <string name="weather_update">Weather update</string>
     <string name="weather_woeid">woeid</string>
     <string name="office_wifi">office-wifi</string>
+    <string name="home_wifi">home-wifi</string>
+    <string name="reminder_tone">reminder tone</string>
+    <string name="week_start_reminder">week_start_reminder</string>
+    <string name="week_end_reminder">week_end_reminder</string>
     <string name="car_disconnect_tone">car_disconnect_tone</string>
     <string-array name="paired_devices">
         <item>Car stereo</item>
