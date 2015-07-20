@@ -122,15 +122,21 @@ public class Jarvis extends IntentService {
         SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         boolean set_office_volume = pref.getBoolean(getString(R.string.office_volume), false);
         String office_wifi = pref.getString(getString(R.string.office_wifi), null);
+        AudioManager am = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
 
 
         if (office_wifi == null || !office_wifi.equals(last_wifi_connected)) {
             return;
         }
 
+        // Don't change any audio setting if vibrate/silent mode is ON
+        if (am.getRingerMode() != AudioManager.RINGER_MODE_NORMAL) {
+            return;
+        }
+
+
         if (set_office_volume) {
             if (wifi_connected) {
-                AudioManager am = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
                 int max_ringer_volume = am.getStreamMaxVolume(AudioManager.STREAM_RING);
                 int max_notif_volume = am.getStreamMaxVolume(AudioManager.STREAM_NOTIFICATION);
                 set_ringer_volume(max_notif_volume/2, max_ringer_volume/2);
