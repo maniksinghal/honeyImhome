@@ -102,4 +102,9 @@
         android:title="Friday evening reminder for home"
         android:defaultValue=""
         android:summary="Office wifi" />
+    <CheckBoxPreference
+        android:key="@string/office_volume"
+        android:title="Lower ringer volume in office"
+        android:summaryOff="Ringer volume is not adjusted"
+        android:summaryOn="Ringer volume is lowered when in office" />
     </PreferenceScreen>

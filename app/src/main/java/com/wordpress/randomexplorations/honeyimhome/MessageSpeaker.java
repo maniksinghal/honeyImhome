@@ -225,7 +225,7 @@ public class MessageSpeaker implements
             // SCO in action
             audio_stream = String.valueOf(AudioManager.STREAM_VOICE_CALL);
         } else {
-            audio_stream = String.valueOf(AudioManager.STREAM_MUSIC);
+            audio_stream = String.valueOf(AudioManager.STREAM_RING);
         }
 
         myHashAlarm.put(TextToSpeech.Engine.KEY_PARAM_STREAM,

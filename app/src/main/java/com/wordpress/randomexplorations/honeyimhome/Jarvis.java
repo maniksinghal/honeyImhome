@@ -79,6 +79,70 @@ public class Jarvis extends IntentService {
         }
 
     }
+
+    private void set_ringer_volume(int notif_volume, int ring_volume) {
+        SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        SharedPreferences.Editor ed = pref.edit();
+        AudioManager am = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
+        int cur_notif_volume = am.getStreamVolume(AudioManager.STREAM_NOTIFICATION);
+        int cur_ring_volume = am.getStreamVolume(AudioManager.STREAM_RING);
+
+        ed.putInt(getString(R.string.notification_volume), cur_notif_volume);
+        ed.putInt(getString(R.string.ringer_volume), cur_ring_volume);
+        ed.commit();
+
+        am.setStreamVolume(AudioManager.STREAM_NOTIFICATION, notif_volume, 0);
+        am.setStreamVolume(AudioManager.STREAM_RING, ring_volume, 0);
+
+        return;
+    }
+
+    private void restore_ringer_volume() {
+        SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        int notif_volume = pref.getInt(getString(R.string.notification_volume), -1);
+        int ring_volume = pref.getInt(getString(R.string.ringer_volume), -1);
+        AudioManager am = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
+
+        if (notif_volume != -1) {
+            am.setStreamVolume(AudioManager.STREAM_NOTIFICATION, notif_volume, 0);
+        }
+
+        if (ring_volume != -1) {
+            am.setStreamVolume(AudioManager.STREAM_RING, ring_volume, 0);
+        }
+
+
+        return;
+    }
+
+    /*
+    * Adjust phone ringer volume based on whether we logged in/off from office
+     */
+    private void handle_office_ringer_volume() {
+        SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        boolean set_office_volume = pref.getBoolean(getString(R.string.office_volume), false);
+        String office_wifi = pref.getString(getString(R.string.office_wifi), null);
+
+
+        if (office_wifi == null || !office_wifi.equals(last_wifi_connected)) {
+            return;
+        }
+
+        if (set_office_volume) {
+            if (wifi_connected) {
+                AudioManager am = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
+                int max_ringer_volume = am.getStreamMaxVolume(AudioManager.STREAM_RING);
+                int max_notif_volume = am.getStreamMaxVolume(AudioManager.STREAM_NOTIFICATION);
+                set_ringer_volume(max_notif_volume/2, max_ringer_volume/2);
+            } else {
+                restore_ringer_volume();
+            }
+        }
+
+
+
+    }
+
     private void handle_wifi_reminders() {
 
         Calendar date = Calendar.getInstance();
@@ -132,8 +196,8 @@ public class Jarvis extends IntentService {
             last_wifi_connected = new_wifi_name;
             Log.d("this", "Logged wifi-state change!! connected:" + new_state + ", name: " + new_wifi_name);
 
-            // Todo: handle wifi-state changes
             handle_wifi_reminders();
+            handle_office_ringer_volume();
             cleanupIntent();
 
         }
@@ -364,6 +428,13 @@ public class Jarvis extends IntentService {
             r.play();
         }
 
+        /*
+        * Use case: Parked car in office => office-wifi connected => car-bluetooth disconnected
+        * Will cause volume to get restored
+        * Skip restoring
+         */
+        //restore_ringer_volume();
+
         connected_to_car = false;
         cleanupIntent();
         return;
@@ -377,6 +448,13 @@ public class Jarvis extends IntentService {
         int insert_location = 0;
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         Log.d("this", "Jarvis: Connected to Car");
+        AudioManager am = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
+
+        // Bump up the volume to max
+        int notif_volume = am.getStreamMaxVolume(AudioManager.STREAM_NOTIFICATION);
+        int ring_volume = am.getStreamMaxVolume(AudioManager.STREAM_RING);
+        set_ringer_volume(notif_volume, ring_volume);
+
 
         // MessageSpeaker might be initialized but may not be using BluetoothSCO.
         // Shutdown MessageSpeaker so that it re-initializes with BluetoothSCO

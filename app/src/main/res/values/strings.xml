@@ -25,6 +25,9 @@
     <string name="week_start_reminder">week_start_reminder</string>
     <string name="week_end_reminder">week_end_reminder</string>
     <string name="car_disconnect_tone">car_disconnect_tone</string>
+    <string name="office_volume">office volume</string>
+    <string name="notification_volume">notification volume</string>
+    <string name="ringer_volume">ringer volume</string>
     <string-array name="paired_devices">
         <item>Car stereo</item>
         <item>Home speaker</item>
