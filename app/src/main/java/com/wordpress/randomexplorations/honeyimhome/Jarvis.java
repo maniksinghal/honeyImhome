@@ -457,9 +457,8 @@ public class Jarvis extends IntentService {
         AudioManager am = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
 
         // Bump up the volume to max
-        int notif_volume = am.getStreamMaxVolume(AudioManager.STREAM_NOTIFICATION);
-        int ring_volume = am.getStreamMaxVolume(AudioManager.STREAM_RING);
-        set_ringer_volume(notif_volume, ring_volume);
+        int music_volume = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+        am.setStreamVolume(AudioManager.STREAM_MUSIC, music_volume, 0);
 
 
         // MessageSpeaker might be initialized but may not be using BluetoothSCO.
