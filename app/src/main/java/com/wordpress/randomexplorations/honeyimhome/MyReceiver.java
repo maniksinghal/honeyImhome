@@ -169,6 +169,9 @@ public class MyReceiver extends WakefulBroadcastReceiver {
                     message = currentMessage.getDisplayMessageBody();
                     Log.d("this", "senderNum: "+ senderNum + "; message: " + message);
 
+                    smsParser parser = new smsParser(currentMessage, thisContext);
+                    parser.handleMessage();
+
                     // handle only one message
                     break;
 

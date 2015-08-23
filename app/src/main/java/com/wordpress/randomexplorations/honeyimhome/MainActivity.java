@@ -42,6 +42,35 @@ public class MainActivity extends ActionBarActivity {
         return true;
     }
 
+/*
+    private void get_xml() {
+        smsParser obj = new smsParser(null, this);
+        obj.handleMessage_debug("VM-CITIBK",
+                "Your BSNL payment on 8023681442 has been processed successfully");
+
+    }
+    */
+
+    private void get_bill_payments() {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+
+        String message = "";
+
+        message += prefs.getString("bsnl_bill", "BSNL bill payment records not found");
+        message += "\n";
+        message += prefs.getString("meha_vodafone_bill", "Meha Vodafone bill payment records not found");
+        message += "\n";
+        message += prefs.getString("my_airtel_bill", "My Airtel bill payment records not found");
+        message += "\n";
+        message += prefs.getString("bescom_bill", "BESCOM bill payment records not found");
+
+        message += "\n\n";
+        message += prefs.getString("unrelated_message", "");
+
+        TextView tv = (TextView)findViewById(R.id.hello_world);
+        tv.setText(message);
+    }
+
     private void get_parameters() {
 
         AudioManager am = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
@@ -72,6 +101,8 @@ public class MainActivity extends ActionBarActivity {
         message += "fixed_volume: " + fixed_volume + "\n\n";
         message += "last connected wifi SSID: " + prefs.getString(MyReceiver.EXTRA_LAST_WIFI_NAME, "<not-found>") + "\n";
         message += "wifi connection status: " + prefs.getBoolean(MyReceiver.EXTRA_LAST_WIFI_CONNECTED, false) + "\n";
+
+        //get_xml();
 
         TextView tv = (TextView)findViewById(R.id.hello_world);
         tv.setText(message);
@@ -121,6 +152,8 @@ public class MainActivity extends ActionBarActivity {
             MyReceiver.startWakefulService(this, i);
         } else if (id == R.id.action_get_params) {
             get_parameters();
+        } else if (id == R.id.action_get_bills) {
+            get_bill_payments();
         }
 
 

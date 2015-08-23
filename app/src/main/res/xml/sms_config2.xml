@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<all>
+    <Sender name=".*C[iI][tT][iI][bB][kK].*">
+        <message text=".*BSNL.*23681442.*has been processed successfully.*">
+            <transaction type="bsnl_bill"/>
+            <log text="BSNL bill payment last made on #DATE"/>
+        </message>
+        <message text=".*VODAFONE.*98XX7XXX67.*has been processed successfully.*">
+            <transaction type="meha_vodafone_bill"/>
+            <log text="Meha vodafone bill payment last made on #DATE"/>
+        </message>
+        <message text=".*BESCOM.*">
+            <transaction type="besom_bill"/>
+            <log action="message_text"/>  <!-- Use message-text as log -->
+        </message>
+    </Sender>
+    <Sender name="*BSNL*">
+        <message text=".*Payment.*23681442.*has been received.*">
+            <transaction type="bsnl_bill"/>
+            <log text="BSNL bill payment last received on #DATE"/>
+        </message>
+    </Sender>
+    <Sender name="Vodafone">
+        <message text="Vodafone bill payment made">
+            <transaction type="meha_vodafone_bill"/>
+            <log text="Meha Vodafone bill payment last received on #DATE"/>
+        </message>
+    </Sender>
+    <Sender name="121">
+        <message text=".*Bill payment.*9886438800.*has been processed successfully.*">
+            <transaction type="my_airtel_bill"/>
+            <log text="My Airtel bill payment last received on #DATE"/>
+        </message>
+    </Sender>
+    <Sender name=".*BESCOM.*">
+        <message text=".*">
+            <transaction type="bescom_bill"/>
+            <log action="message_text"/>
+        </message>
+    </Sender>
+</all>
+
