@@ -14,7 +14,7 @@
             <log action="message_text"/>  <!-- Use message-text as log -->
         </message>
     </Sender>
-    <Sender name="*BSNL*">
+    <Sender name=".*BSNL.*">
         <message text=".*Payment.*23681442.*has been received.*">
             <transaction type="bsnl_bill"/>
             <log text="BSNL bill payment last received on #DATE"/>

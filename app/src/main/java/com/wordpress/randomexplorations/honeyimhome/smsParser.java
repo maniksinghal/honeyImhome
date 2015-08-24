@@ -96,6 +96,7 @@ public class smsParser {
 
                             if (message_sender.matches(name)) {
                                 // Name matched, now to find the message body
+                                Log.d("this", "Matched sender name with: " + name);
                                 action = FINDING_MESSAGE;
                             }
 
@@ -115,9 +116,18 @@ public class smsParser {
 
                             if (message_body.matches(message_text)) {
                                 // Sender and message match, collect the other essentials
+                                Log.d("this", "Found message: " + message_text);
                                 action = FINDING_OTHERS;
                             }
 
+                        }
+                    } else if (event_type == XmlPullParser.END_TAG) {
+                        tag = parser.getName();
+                        if (tag.equals("Sender")) {
+                            // Sender Tag ended witout finding matching message
+                            Log.d("this", "Could not find matching message for sender: "
+                              + message_sender);
+                            break;
                         }
                     }
                 } else if (action == FINDING_OTHERS) {
@@ -145,6 +155,14 @@ public class smsParser {
                                 log = log.replaceAll(pattern, df.format(today));
                             }
                         }
+                    } else if (event_type == XmlPullParser.END_TAG) {
+                        Log.d("this", "Got end tag");
+                        tag = parser.getName();
+                        if (tag.equals("message")) {
+                            // End of message tag, we hopefully collected all 'others'
+                            break;
+                        }
+                        Log.d("this", "End of end tag");
                     }
                 }
 

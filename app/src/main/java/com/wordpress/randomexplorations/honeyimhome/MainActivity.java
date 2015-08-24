@@ -42,15 +42,6 @@ public class MainActivity extends ActionBarActivity {
         return true;
     }
 
-/*
-    private void get_xml() {
-        smsParser obj = new smsParser(null, this);
-        obj.handleMessage_debug("VM-CITIBK",
-                "Your BSNL payment on 8023681442 has been processed successfully");
-
-    }
-    */
-
     private void get_bill_payments() {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
 
@@ -102,7 +93,11 @@ public class MainActivity extends ActionBarActivity {
         message += "last connected wifi SSID: " + prefs.getString(MyReceiver.EXTRA_LAST_WIFI_NAME, "<not-found>") + "\n";
         message += "wifi connection status: " + prefs.getBoolean(MyReceiver.EXTRA_LAST_WIFI_CONNECTED, false) + "\n";
 
-        //get_xml();
+        /*
+        smsParser obj = new smsParser(null, this);
+        obj.handleMessage_debug("121",
+                "Your Bill payment for number 9886438800 has been processed successfully. ok");
+         */
 
         TextView tv = (TextView)findViewById(R.id.hello_world);
         tv.setText(message);
