@@ -75,42 +75,16 @@ public class Jarvis extends IntentService {
             Vibrator v = (Vibrator)getSystemService(Context.VIBRATOR_SERVICE);
             Ringtone r = RingtoneManager.getRingtone(getApplicationContext(), notification);
             r.play();
-            v.vibrate(500);
+            v.vibrate(2000);
         }
 
     }
 
     private void set_ringer_volume(int notif_volume, int ring_volume) {
-        SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-        SharedPreferences.Editor ed = pref.edit();
+
         AudioManager am = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
-        int cur_notif_volume = am.getStreamVolume(AudioManager.STREAM_NOTIFICATION);
-        int cur_ring_volume = am.getStreamVolume(AudioManager.STREAM_RING);
-
-        ed.putInt(getString(R.string.notification_volume), cur_notif_volume);
-        ed.putInt(getString(R.string.ringer_volume), cur_ring_volume);
-        ed.commit();
-
         am.setStreamVolume(AudioManager.STREAM_NOTIFICATION, notif_volume, 0);
         am.setStreamVolume(AudioManager.STREAM_RING, ring_volume, 0);
-
-        return;
-    }
-
-    private void restore_ringer_volume() {
-        SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-        int notif_volume = pref.getInt(getString(R.string.notification_volume), -1);
-        int ring_volume = pref.getInt(getString(R.string.ringer_volume), -1);
-        AudioManager am = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
-
-        if (notif_volume != -1) {
-            am.setStreamVolume(AudioManager.STREAM_NOTIFICATION, notif_volume, 0);
-        }
-
-        if (ring_volume != -1) {
-            am.setStreamVolume(AudioManager.STREAM_RING, ring_volume, 0);
-        }
-
 
         return;
     }
@@ -136,12 +110,12 @@ public class Jarvis extends IntentService {
 
 
         if (set_office_volume) {
+            int max_ringer_volume = am.getStreamMaxVolume(AudioManager.STREAM_RING);
+            int max_notif_volume = am.getStreamMaxVolume(AudioManager.STREAM_NOTIFICATION);
             if (wifi_connected) {
-                int max_ringer_volume = am.getStreamMaxVolume(AudioManager.STREAM_RING);
-                int max_notif_volume = am.getStreamMaxVolume(AudioManager.STREAM_NOTIFICATION);
                 set_ringer_volume(max_notif_volume/2, max_ringer_volume/2);
             } else {
-                restore_ringer_volume();
+                set_ringer_volume(max_notif_volume, max_ringer_volume);
             }
         }
 
@@ -434,6 +408,8 @@ public class Jarvis extends IntentService {
             r.play();
         }
 
+        end_ride(prefs);
+
         /*
         * Use case: Parked car in office => office-wifi connected => car-bluetooth disconnected
         * Will cause volume to get restored
@@ -447,6 +423,45 @@ public class Jarvis extends IntentService {
     }
 
     /*
+    * Log the time when we started the car ride
+     */
+    private void start_ride(SharedPreferences prefs) {
+        Long cur_time = System.currentTimeMillis();
+        Long prev_end_time = prefs.getLong("ride_end_time", 0);
+
+        if (cur_time - prev_end_time < (30*60*1000) &&
+                cur_time - prev_end_time >= 0) {
+            // looks like an upto half an hour break in a long journey
+            // Continue the long ride
+        } else {
+            SharedPreferences.Editor editor = prefs.edit();
+            editor.putLong("ride_start_time", cur_time);
+            editor.commit();
+        }
+
+    }
+
+    /*
+    * Log the end time of the car ride
+     */
+    private void end_ride(SharedPreferences prefs) {
+        Long end_time = System.currentTimeMillis();
+        Long start_time = prefs.getLong("ride_start_time", 0);
+
+        if (end_time <= start_time) {
+            // Something invalid.. ignore
+            return;
+        } else {
+            SharedPreferences.Editor editor = prefs.edit();
+            editor.putLong("ride_end_time", end_time);
+            editor.commit();
+
+            Long minutes_diff = (end_time - start_time) / (1000 *60);
+            show_reminder("Ride time today: " + minutes_diff + " minutes.", null);
+
+        }
+    }
+    /*
     * User just connected to car stereo
     */
     private void connected_to_car() {
@@ -459,6 +474,8 @@ public class Jarvis extends IntentService {
         // Bump up the volume to max
         int music_volume = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
         am.setStreamVolume(AudioManager.STREAM_MUSIC, music_volume, 0);
+
+        start_ride(prefs);
 
 
         // MessageSpeaker might be initialized but may not be using BluetoothSCO.

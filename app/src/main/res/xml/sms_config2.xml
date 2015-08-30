@@ -35,7 +35,19 @@
     <Sender name=".*BESCOM.*">
         <message text=".*">
             <transaction type="bescom_bill"/>
-            <log action="message_text"/>
+            <log text="message_text"/>
+        </message>
+    </Sender>
+    <Sender name=".*ICICI.*">
+        <message text=".*Payment of.*your ICICI Bank Credit Card Account.*">
+            <transaction type="icici_credit_card_bill"/>
+            <log text="ICICI credit card payment last done on #DATE"/>
+        </message>
+    </Sender>
+    <Sender name=".*3666*">
+        <message text=".*">
+            <transaction type="test_message"/>
+            <log text="Message received from *3666*"/>
         </message>
     </Sender>
 </all>
