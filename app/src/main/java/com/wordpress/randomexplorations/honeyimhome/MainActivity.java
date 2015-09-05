@@ -51,7 +51,10 @@ public class MainActivity extends ActionBarActivity {
         message += "CREDIT CARDS:\n";
         message += prefs.getString("icici_credit_card_bill",
                                 "ICICI credit card payment records not found");
-        message += "\n\nOTHERS:\n";
+        message += "\n";
+        message += prefs.getString("citibank_credit_card", "Citibank credit card payment records not found");
+
+        message += "\n\nBILLS:\n";
         message += prefs.getString("bsnl_bill", "BSNL bill payment records not found");
         message += "\n";
         message += prefs.getString("meha_vodafone_bill", "Meha Vodafone bill payment records not found");
@@ -61,8 +64,13 @@ public class MainActivity extends ActionBarActivity {
         message += prefs.getString("bescom_bill", "BESCOM bill payment records not found");
 
 
-        message += "\n\n";
-        message += prefs.getString("unrelated_message", "");
+        message += "\n\nRENT:\n";
+        message += prefs.getString("house_rent", "House Rent payment records not found");
+
+
+
+        //message += "\n\n";
+        //message += prefs.getString("unrelated_message", "");
 
         TextView tv = (TextView)findViewById(R.id.hello_world);
         tv.setText(message);

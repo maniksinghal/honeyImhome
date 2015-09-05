@@ -13,6 +13,14 @@
             <transaction type="besom_bill"/>
             <log action="message_text"/>  <!-- Use message-text as log -->
         </message>
+        <message text=".*RADHA RANI.*was accepted">
+            <transaction type="house_rent"/>
+            <log text="House Rent last paid on #DATE"/>
+        </message>
+        <message text=".*Payment.*received.*\*\*7533">
+            <transaction type="citibank_credit_card"/>
+            <log text="Citibank Credit card payment last done on #DATE"/>
+        </message>
     </Sender>
     <Sender name=".*BSNL.*">
         <message text=".*Payment.*23681442.*has been received.*">
