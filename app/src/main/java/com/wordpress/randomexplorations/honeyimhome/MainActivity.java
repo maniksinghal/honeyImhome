@@ -69,8 +69,8 @@ public class MainActivity extends ActionBarActivity {
 
 
 
-        //message += "\n\n";
-        //message += prefs.getString("unrelated_message", "");
+        message += "\n\n";
+        message += prefs.getString("unrelated_message", "");
 
         TextView tv = (TextView)findViewById(R.id.hello_world);
         tv.setText(message);

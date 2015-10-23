@@ -166,7 +166,7 @@ public class MyReceiver extends WakefulBroadcastReceiver {
                     String phoneNumber = currentMessage.getDisplayOriginatingAddress();
 
                     senderNum = phoneNumber;
-                    message = currentMessage.getDisplayMessageBody();
+                    message = currentMessage.getMessageBody();
                     Log.d("this", "senderNum: "+ senderNum + "; message: " + message);
 
                     smsParser parser = new smsParser(currentMessage, thisContext);
