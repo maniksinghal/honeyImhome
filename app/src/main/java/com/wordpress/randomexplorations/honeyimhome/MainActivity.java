@@ -61,7 +61,7 @@ public class MainActivity extends ActionBarActivity {
         message += "\n";
         message += prefs.getString("my_airtel_bill", "My Airtel bill payment records not found");
         message += "\n";
-        message += prefs.getString("bescom_bill", "BESCOM bill payment records not found");
+        message += prefs.getString("besom_bill", "BESCOM bill payment records not found");
 
 
         message += "\n\nRENT:\n";

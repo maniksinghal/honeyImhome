@@ -9,9 +9,9 @@
             <transaction type="meha_vodafone_bill"/>
             <log text="Meha vodafone bill payment last made on #DATE"/>
         </message>
-        <message text=".*BESCOM.*">
+        <message text=".*BESCOM.*has been processed successfully.*">
             <transaction type="besom_bill"/>
-            <log action="message_text"/>  <!-- Use message-text as log -->
+            <log text="Electricity (BESCOM) bill payment last made on #DATE"/>
         </message>
         <message text=".*RADHA RANI.*was accepted.*">
             <transaction type="house_rent"/>
@@ -38,12 +38,6 @@
         <message text=".*Bill payment.*for your airtel.*9886438800.*has.*">
             <transaction type="my_airtel_bill"/>
             <log text="My Airtel bill payment last received on #DATE"/>
-        </message>
-    </Sender>
-    <Sender name=".*BESCOM.*">
-        <message text=".*">
-            <transaction type="bescom_bill"/>
-            <log action="message_text"/>
         </message>
     </Sender>
     <Sender name=".*3666*">
