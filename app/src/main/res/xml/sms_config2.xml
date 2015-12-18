@@ -13,6 +13,10 @@
             <transaction type="besom_bill"/>
             <log text="Electricity (BESCOM) bill payment last made on #DATE"/>
         </message>
+        <message text=".*AIRTEL.*has been processed successfully.*">
+            <transaction type="my_airtel_bill"/>
+            <log text="My Airtel bill payment last made on #DATE"/>
+        </message>
         <message text=".*RADHA RANI.*was accepted.*">
             <transaction type="house_rent"/>
             <log text="House Rent last paid on #DATE"/>
