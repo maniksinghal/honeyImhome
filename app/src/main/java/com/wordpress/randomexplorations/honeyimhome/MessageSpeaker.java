@@ -176,6 +176,13 @@ public class MessageSpeaker implements
                             connection_attempt_started = true;
                             am.stopBluetoothSco();  // Stop before start todo: see if it works
                             am.startBluetoothSco();
+                        } else {
+                            // We were already connected and now SCO got switched off
+                            if (scoMgr != null) {
+                                am.setMode(AudioManager.MODE_NORMAL);
+                                am.setSpeakerphoneOn(true);
+                                scoMgr = null;
+                            }
                         }
                         break;
 

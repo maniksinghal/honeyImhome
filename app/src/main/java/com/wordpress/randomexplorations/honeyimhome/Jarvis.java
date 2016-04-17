@@ -274,7 +274,12 @@ public class Jarvis extends IntentService {
             processIntent();
         } else {
             // Cleanup all resources
-            if (speaker.ready && !connected_to_car) {
+            if (speaker.ready) {
+                /*
+                * We need to shutdown speaker (at least SCO) as we may not get
+                * notifications when user disconnects SCO (say from car stereo)
+                * if our service is sleeping ??
+                */
                 speaker.shutdown();
             }
         }
