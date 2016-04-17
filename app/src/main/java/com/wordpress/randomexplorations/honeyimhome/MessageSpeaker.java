@@ -114,14 +114,23 @@ public class MessageSpeaker implements
                             waiting_for_sco = false;
 
                             AudioManager am = (AudioManager)context.getSystemService(Context.AUDIO_SERVICE);
+
                             if (!connection_attempt_started) {
                                 // SCO was already started. Start from your end too so that
                                 // if the other app disconnects, we still have it connected.
                                 connection_attempt_started = true;
                                 am.startBluetoothSco();
-                                am.setMode(AudioManager.MODE_IN_CALL);
                                 am.setBluetoothScoOn(true);
 
+                            } else {
+                                // SCO started on our request
+                                int mode;
+                                am.setMode(AudioManager.MODE_IN_COMMUNICATION);
+                                am.setSpeakerphoneOn(false);
+
+                                // Check if mode setting worked
+                                mode = am.getMode();
+                                Log.d("this", "SCO established while attempting to connect, mode: " + mode);
                             }
 
                             if (!waiting_for_tts && !msg_speaker_errored) {
@@ -162,6 +171,8 @@ public class MessageSpeaker implements
                             }
 
                         } else if (waiting_for_sco) {
+                            Log.d("this", "Received event SCO disconnected/Errored!! " +
+                                            "Now starting first connection attempt");
                             connection_attempt_started = true;
                             am.stopBluetoothSco();  // Stop before start todo: see if it works
                             am.startBluetoothSco();
@@ -219,14 +230,16 @@ public class MessageSpeaker implements
         myHashAlarm.put(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID,
                 "end of wakeup message ID");
 
-        // Overriding stream to point to voice-call or music based on
-        //whether bluetooth SCO is connected.
-        if (scoMgr != null) {
+        // Overriding stream to music always as it works fine both
+        // from phone (non-sco) and stereo (during sco)
+        audio_stream = String.valueOf(AudioManager.STREAM_MUSIC);
+
+        /*if (scoMgr != null) {
             // SCO in action
             audio_stream = String.valueOf(AudioManager.STREAM_VOICE_CALL);
         } else {
             audio_stream = String.valueOf(AudioManager.STREAM_MUSIC);
-        }
+        }*/
 
         myHashAlarm.put(TextToSpeech.Engine.KEY_PARAM_STREAM,
                 audio_stream);
@@ -268,6 +281,8 @@ public class MessageSpeaker implements
             if (scoMgr != null) {
                 AudioManager am = (AudioManager)context.getSystemService(Context.AUDIO_SERVICE);
                 am.stopBluetoothSco();
+                am.setMode(AudioManager.MODE_NORMAL);
+                am.setSpeakerphoneOn(true);
                 scoMgr = null;
             }
 
