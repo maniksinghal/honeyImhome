@@ -399,6 +399,26 @@ public class Jarvis extends IntentService {
         return true;
     }
 
+    private boolean could_i_be_leaving_for_office() {
+
+        // Check the day/time right now
+        Calendar now = Calendar.getInstance();
+        if (now.get(Calendar.HOUR_OF_DAY) >= 12) {
+            // Its afternoon/evening
+            return false;
+        }
+
+        if (now.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY ||
+                now.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
+            return false;
+        }
+
+        /*
+        * Its a weekday morning. Its highly probable that I am going to office
+         */
+        return true;
+    }
+
 
     /*
     * User just disconnected from car stereo
@@ -473,8 +493,10 @@ public class Jarvis extends IntentService {
 
         int insert_location = 0;
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        boolean am_i_leaving_office;
         Log.d("this", "Jarvis: Connected to Car");
         AudioManager am = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
+        boolean play_office_commute_eta = prefs.getBoolean(getString(R.string.office_commute_eta), true);
 
         // Bump up the volume to max
         int music_volume = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
@@ -501,7 +523,8 @@ public class Jarvis extends IntentService {
 
         // Check if need to inform Hubby about leaving office
         String message = null;
-        if (leaving_office()) {
+        am_i_leaving_office = leaving_office();
+        if (am_i_leaving_office) {
             String phone = prefs.getString(getString(R.string.hubby_phone_number), "0000");
             message = prefs.getString(getString(R.string.connect_message), "empty");
             SmsManager smsManager = SmsManager.getDefault();
@@ -536,6 +559,31 @@ public class Jarvis extends IntentService {
         }
 
         // Check if time-to office is applicable
+        if (am_i_leaving_office && play_office_commute_eta) {
+            // Play the ETA for reaching home
+            i = new Intent();
+            i.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_TIME_TO_DESTINATION);
+            String orig = prefs.getString(getString(R.string.office_loc), "0000");
+            String dest = prefs.getString(getString(R.string.home_loc), "0000");
+            i.putExtra(MyReceiver.EXTRA_ORIG_LOCATION, "orig");
+            i.putExtra(MyReceiver.EXTRA_DEST_LOCATION, "dest");
+            i.putExtra(MyReceiver.EXTRA_DEST_NAME, "home");
+            i.putExtra(MyReceiver.EXTRA_NON_WAKEFUL, true);
+            workList.add(insert_location, i);
+            insert_location++;
+        } else if (could_i_be_leaving_for_office() && play_office_commute_eta) {
+            // Play the ETA for reaching office
+            i = new Intent();
+            i.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_TIME_TO_DESTINATION);
+            String orig = prefs.getString(getString(R.string.home_loc), "0000");
+            String dest = prefs.getString(getString(R.string.office_loc), "0000");
+            i.putExtra(MyReceiver.EXTRA_ORIG_LOCATION, orig);
+            i.putExtra(MyReceiver.EXTRA_DEST_LOCATION, dest);
+            i.putExtra(MyReceiver.EXTRA_DEST_NAME, "office");
+            i.putExtra(MyReceiver.EXTRA_NON_WAKEFUL, true);
+            workList.add(insert_location, i);
+            insert_location++;
+        }
 
         connected_to_car = true;
         // Keep the car-connected intent to hold the wakelock, so that the sub-intents can run
@@ -567,6 +615,11 @@ public class Jarvis extends IntentService {
 
         if (!speaker.ready) {
             int sco_mode = Integer.parseInt(prefs.getString(getString(R.string.sco_mode), null));
+            if (!connected_to_car) {
+                // Can't use SCO
+                Log.d("this", "Not using SCO as not connected to car");
+                use_sco = false;
+            }
             speaker.initialize(use_sco, sco_mode);  // Initializer will call us back
             return;
         }
@@ -606,6 +659,7 @@ public class Jarvis extends IntentService {
         int purpose = runningIntent.getIntExtra(MyReceiver.EXTRA_PURPOSE,
                 MyReceiver.EXTRA_PURPOSE_INVALID);
 
+        Log.d("this", "Processing intent with purpose: " + purpose);
         switch(purpose) {
             case MyReceiver.EXTRA_PURPOSE_MESSAGE_TO_PLAY:
                 String message = runningIntent.getStringExtra(MyReceiver.EXTRA_VALUE);
@@ -645,6 +699,13 @@ public class Jarvis extends IntentService {
             case MyReceiver.EXTRA_PURPOSE_FETCH_WEATHER:
                 String woeid = prefs.getString(getString(R.string.weather_woeid), "0");
                 new WeatherUpdate(this, woeid).execute(null, null, null);
+                break;
+
+            case MyReceiver.EXTRA_PURPOSE_TIME_TO_DESTINATION:
+                String orig = runningIntent.getStringExtra(MyReceiver.EXTRA_ORIG_LOCATION);
+                String dest = runningIntent.getStringExtra(MyReceiver.EXTRA_DEST_LOCATION);
+                String dest_name = runningIntent.getStringExtra(MyReceiver.EXTRA_DEST_NAME);
+                new TrafficUpdate(this, orig, dest, dest_name).execute(null, null, null);
                 break;
 
             case MyReceiver.EXTRA_PURPOSE_FETCH_NEWS:

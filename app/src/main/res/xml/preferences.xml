@@ -68,7 +68,7 @@
         android:dependency="@string/weather_update"
         android:key="@string/weather_woeid"
         android:title="WOEID"
-        android:defaultValue="29228812"
+        android:defaultValue="1277333"
         android:summary="Yahoo weather service WOEID" />
     <EditTextPreference
         android:key="@string/office_wifi"
@@ -102,9 +102,24 @@
         android:title="Friday evening reminder for home"
         android:defaultValue=""
         android:summary="Office wifi" />
+    <EditTextPreference
+        android:key="@string/office_loc"
+        android:title="Office location"
+        android:defaultValue="12.936537,77.695764"
+        android:summary="Coordinates" />
+    <EditTextPreference
+        android:key="@string/home_loc"
+        android:title="Home location"
+        android:defaultValue="12.988291,77.698091"
+        android:summary="Coordinates" />
     <CheckBoxPreference
         android:key="@string/office_volume"
         android:title="Lower ringer volume in office"
         android:summaryOff="Ringer volume is not adjusted"
         android:summaryOn="Ringer volume is lowered when in office" />
+    <CheckBoxPreference
+        android:key="@string/office_commute_eta"
+        android:title="Provide office commute ETAs"
+        android:summaryOff="Office commute ETAs not played"
+        android:summaryOn="Playing Office commute ETAs" />
     </PreferenceScreen>

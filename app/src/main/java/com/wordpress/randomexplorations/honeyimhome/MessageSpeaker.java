@@ -56,17 +56,18 @@ public class MessageSpeaker implements
 
             Log.d("this", "Sco Timer expired when waiting_for_sco: " + waiting_for_sco);
             if (waiting_for_sco) {
+                /*
+                * Not received SCO update, assume failed
+                * Continue to speak from the mobile
+                 */
                 waiting_for_sco = false;
-                msg_speaker_errored = true;
 
                 if (scoMgr != null) {
                     context.unregisterReceiver(scoMgr);
                     scoMgr = null;
                 }
 
-                if (!waiting_for_tts) {
-                    jarvis.cleanupIntent();
-                }
+                jarvis.processIntent();
             }
         }
 
@@ -133,18 +134,8 @@ public class MessageSpeaker implements
                                 Log.d("this", "SCO established while attempting to connect, mode: " + mode);
                             }
 
-                            if (!waiting_for_tts && !msg_speaker_errored) {
-
-                                // TTS is also ready
-                                ready = true;
-                                jarvis.processIntent();
-
-                            } else if (msg_speaker_errored) {
-                                // TTS errored out.. Stop SCO
-                                Log.d("this", "Sco: Cleaning up SCO and intent");
-                                am.stopBluetoothSco();
-                                jarvis.cleanupIntent();
-                            }
+                            ready = true;
+                            jarvis.processIntent();
                         }
                         break;
 
@@ -155,8 +146,12 @@ public class MessageSpeaker implements
                                 " waiting_tts: " + waiting_for_tts + " conn_attempt: " + connection_attempt_started);
                         AudioManager am = (AudioManager)context.getSystemService(Context.AUDIO_SERVICE);
                         if (connection_attempt_started && waiting_for_sco) {
+                            /*
+                            * We reach here only if TTS is already initialized
+                            * If SCO fails, then continue speaking from mobile
+                             */
                             waiting_for_sco = false;
-                            msg_speaker_errored = true;
+                            //msg_speaker_errored = true;
 
                             if (timer != null) {   // Stop the timer, that the event has occured.
                                 timer.cancel();
@@ -165,10 +160,9 @@ public class MessageSpeaker implements
 
                             context.unregisterReceiver(this);
                             scoMgr = null;
+                            ready = true;
 
-                            if (!waiting_for_tts) {
-                                jarvis.cleanupIntent();
-                            }
+                            jarvis.processIntent();
 
                         } else if (waiting_for_sco) {
                             Log.d("this", "Received event SCO disconnected/Errored!! " +
@@ -257,15 +251,11 @@ public class MessageSpeaker implements
 
         // Check if SCO is also ready
         waiting_for_tts = false;
-        Log.d("this", "TTS ready while waiting_for_sco: " + waiting_for_sco +
-                " msg_speaker_errored: " + msg_speaker_errored);
-        if (!waiting_for_sco && !msg_speaker_errored) {
+        if (waiting_for_sco) {
+            initialize_sco(0);  // We'll get called back in case of success/error
+        } else {
             ready = true;
             jarvis.processIntent();
-        } else if (msg_speaker_errored) {
-            // SCO errored out, shutdown TTS
-            tts.shutdown();
-            jarvis.cleanupIntent();
         }
     }
 
@@ -306,13 +296,19 @@ public class MessageSpeaker implements
 
     public void initialize(boolean use_sco, int mode) {
 
+        /*
+        * TTS initialization takes time as compared to SCO
+        * If we init both of them in parallel, then there's an awkward silence
+        * in the car stereo while waiting for TTS
+        * Therefore, we init the SCO after the TTS is initialized.
+         */
         shutdown();
         msg_speaker_errored = false;
 
         Log.d("this", "Initializing speaker with use_sco: " + use_sco + " and mode: " + mode);
 
         if (use_sco) {
-            initialize_sco(mode);
+            waiting_for_sco = true;
         }
 
         tts = new TextToSpeech(context, this);
@@ -321,7 +317,7 @@ public class MessageSpeaker implements
 
     public boolean initialize_sco(int mode) {
 
-        msg_speaker_errored = false;
+        //msg_speaker_errored = false;
 
         AudioManager am = (AudioManager)context.getSystemService(Context.AUDIO_SERVICE);
         Log.d("this", "MessageSpeaker: SCO supported? " + am.isBluetoothScoAvailableOffCall());

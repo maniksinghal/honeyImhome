@@ -30,6 +30,8 @@ public class MyReceiver extends WakefulBroadcastReceiver {
             "com.wordpress.randomexplorations.honeyimhome.weather_update";
     public static final String EXTRA_IS_NEWS_UPDATE =
             "com.wordpress.randomexplorations.honeyimhome.news_update";
+    public static final String EXTRA_IS_TRAFFIC_UPDATE =
+            "com.wordpress.randomexplorations.honeyimhome.traffic_update";
 
     // Intent does not have a wakelock
     // Used by internally generated intents in Jarvis
@@ -42,6 +44,9 @@ public class MyReceiver extends WakefulBroadcastReceiver {
     public static final String EXTRA_LAST_WIFI_EVENT_TIMESTAMP =
             "com.wordpress.randomexplorations.honeyimhome.last_wifi_event_timestamp";
 
+    public static final String EXTRA_ORIG_LOCATION = "com.wordpress.randomexplorations.honeyimhome.orig_loc";
+    public static final String EXTRA_DEST_LOCATION = "com.wordpress.randomexplorations.honeyimhome.dest_loc";
+    public static final String EXTRA_DEST_NAME = "com.wordpress.randomexplorations.honeyimhome.dest_name";
 
     // Play the message with this intent even if not connected to car.
     // Used by internally generated messages.
@@ -55,6 +60,7 @@ public class MyReceiver extends WakefulBroadcastReceiver {
     public static final int EXTRA_PURPOSE_FETCH_WEATHER = 5;
     public static final int EXTRA_PURPOSE_FETCH_NEWS = 6;
     public static final int EXTRA_PURPOSE_WIFI_STATE_CHANGE = 7;
+    public static final int EXTRA_PURPOSE_TIME_TO_DESTINATION = 8;
 
     public static final String AM_IN_CAR = "com.wordpress.randomexplorations.honeyimhome.am_in_car";
 

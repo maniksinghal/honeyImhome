@@ -125,6 +125,7 @@ public class MainActivity extends ActionBarActivity {
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
+        SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(this);
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
@@ -132,8 +133,7 @@ public class MainActivity extends ActionBarActivity {
             startActivityForResult(i, 0);
             return true;
         } else if (id == R.id.action_test) {
-            String str =
-                    PreferenceManager.getDefaultSharedPreferences(this).getString(
+            String str = pref.getString(
                             getString(R.string.test_message), null);
             Log.d("this", "MainActivity: Speaking " + str);
             if (str != null) {
@@ -152,6 +152,19 @@ public class MainActivity extends ActionBarActivity {
         } else if (id == R.id.action_fetch_weather) {
             Intent i = new Intent(this, Jarvis.class);
             i.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_FETCH_WEATHER);
+            i.putExtra(MyReceiver.EXTRA_FORCE_PLAY, true);
+            MyReceiver.startWakefulService(this, i);
+        } else if (id == R.id.action_time_to_office) {
+            Intent i = new Intent(this, Jarvis.class);
+            String orig = pref.getString(getString(R.string.home_loc), null);
+            String dest = pref.getString(getString(R.string.office_loc), null);
+            String dest_name = "office";
+            Log.d("this", "Fetching time to office: orig: " + orig +
+                   " dest:" + dest + " and name: " + dest_name);
+            i.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_TIME_TO_DESTINATION);
+            i.putExtra(MyReceiver.EXTRA_DEST_NAME, dest_name);
+            i.putExtra(MyReceiver.EXTRA_DEST_LOCATION, dest);
+            i.putExtra(MyReceiver.EXTRA_ORIG_LOCATION, orig);
             i.putExtra(MyReceiver.EXTRA_FORCE_PLAY, true);
             MyReceiver.startWakefulService(this, i);
         } else if (id == R.id.action_fetch_news) {

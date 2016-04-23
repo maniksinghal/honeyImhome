@@ -20,13 +20,12 @@ public class WeatherUpdate extends AsyncTask<URL, Void, Void> {
 
     private String description = null;
     private String temperature = null;
-    private String date = null;
     Jarvis jarvis = null;
-    private String yahoo_woeid = null;
+    private String weather_id = null;
 
     public WeatherUpdate(Jarvis jvs, String woeid) {
         jarvis = jvs;
-        yahoo_woeid = woeid;
+        weather_id = woeid;
     }
 
     /*
@@ -52,7 +51,7 @@ public class WeatherUpdate extends AsyncTask<URL, Void, Void> {
             parser.nextTag();
 
             // Most probably pointing to first nesting tag
-            parser.require(XmlPullParser.START_TAG, null, "rss");
+            //parser.require(XmlPullParser.START_TAG, null, "rss");
             int depth = 0;
             while (parser.next() != XmlPullParser.END_TAG || depth > 0) {
 
@@ -67,12 +66,13 @@ public class WeatherUpdate extends AsyncTask<URL, Void, Void> {
 
                 String name = parser.getName();
                 //Log.d("this", "Got start-tag: " + name);
-                if (name.equals("yweather:condition")) {
+                if (name.equals("temperature")) {
                     description = parser.getAttributeValue(null, "text");
-                    temperature = parser.getAttributeValue(null, "temp");
-                    date = parser.getAttributeValue(null, "date");
-                    Log.d("this", "Got descr: " + description + " temp: " + temperature
-                      + ", date: " + date);
+                    temperature = parser.getAttributeValue(null, "value");
+                    Log.d("this", "Got temperature: " + temperature);
+                } else if (name.equals("weather")) {
+                    description = parser.getAttributeValue(null, "value");
+                    Log.d("this", "Got weather: " + description);
                 }
 
 
@@ -92,7 +92,8 @@ public class WeatherUpdate extends AsyncTask<URL, Void, Void> {
         Log.d("this", "WeatherUpdate: Started...");
         try {
             //29228812
-            String addr = "http://weather.yahooapis.com/forecastrss?w=" + yahoo_woeid + "&u=c";
+            String addr = "http://api.openweathermap.org/data/2.5/weather?units=metric" +
+                    "&id=" + weather_id + "&mode=xml&APPID=0a5b7712530e6ce9c58bccef680a7fe1";
             Log.d("this", "Weatherupdate: Built url: " + addr);
             URL url = new URL(addr);
             urlConnection = (HttpURLConnection) url.openConnection();
