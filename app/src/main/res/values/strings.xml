@@ -30,6 +30,7 @@
     <string name="office_volume">office volume</string>
     <string name="office_commute_eta">office_commute_eta_enabled</string>
     <string name="notification_volume">notification volume</string>
+    <string name="start_speech_recognition">start_speech_recognition</string>
     <string name="ringer_volume">ringer volume</string>
     <string-array name="paired_devices">
         <item>Car stereo</item>

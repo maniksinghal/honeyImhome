@@ -10,4 +10,5 @@
     <item android:id="@+id/action_fetch_news" android:title="Fetch News" />
     <item android:id="@+id/action_get_params" android:title="Get params" />
     <item android:id="@+id/action_get_bills" android:title="Bill payment details" />
+    <item android:id="@+id/action_start_SR" android:title="Start speech recognition" />
 </menu>

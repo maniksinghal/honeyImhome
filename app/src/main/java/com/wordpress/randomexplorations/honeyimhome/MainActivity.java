@@ -14,12 +14,16 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
+import android.speech.RecognizerIntent;
 
 import java.util.HashMap;
 import java.util.Locale;
+import java.util.ArrayList;
 
 
 public class MainActivity extends ActionBarActivity {
+
+    private static final int VOICE_RECOGNITION_REQUEST = 0x0101;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,6 +38,8 @@ public class MainActivity extends ActionBarActivity {
     protected void onStart() {
         super.onStart();
     }
+
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -74,6 +80,28 @@ public class MainActivity extends ActionBarActivity {
 
         TextView tv = (TextView)findViewById(R.id.hello_world);
         tv.setText(message);
+    }
+
+    private void start_speech_recognition() {
+        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        intent.putExtra(RecognizerIntent.EXTRA_PROMPT,
+                "Please speak slowly and enunciate clearly.");
+        startActivityForResult(intent, VOICE_RECOGNITION_REQUEST);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        String firstMatch;
+        if (requestCode == VOICE_RECOGNITION_REQUEST && resultCode == RESULT_OK) {
+            ArrayList<String> matches = data
+                    .getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+            firstMatch = matches.get(0);
+
+            TextView tv = (TextView)findViewById(R.id.hello_world);
+            tv.setText(firstMatch);
+        }
     }
 
     private void get_parameters() {
@@ -176,6 +204,8 @@ public class MainActivity extends ActionBarActivity {
             get_parameters();
         } else if (id == R.id.action_get_bills) {
             get_bill_payments();
+        } else if (id == R.id.action_start_SR) {
+            start_speech_recognition();
         }
 
 
