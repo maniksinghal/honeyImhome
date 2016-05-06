@@ -7,6 +7,8 @@ import android.content.SharedPreferences;
 import android.media.AudioManager;
 import android.os.Build;
 import android.preference.PreferenceManager;
+import android.speech.RecognitionListener;
+import android.speech.SpeechRecognizer;
 import android.speech.tts.TextToSpeech;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
@@ -24,19 +26,107 @@ import java.util.ArrayList;
 public class MainActivity extends ActionBarActivity {
 
     private static final int VOICE_RECOGNITION_REQUEST = 0x0101;
+    private MyRecognitionListener myRecognitionListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        myRecognitionListener = new MyRecognitionListener(this);
+
         TextView tv = (TextView)findViewById(R.id.hello_world);
         tv.setText("Hit Settings to make changes");
+
+        Intent intent = getIntent();
+        int value = intent.getIntExtra("purpose", -1);
+        tv.setText("Activity started with value: " + String.valueOf(value));
+
+        if (value == MyReceiver.EXTRA_PURPOSE_START_VOICE_RECOGNITION) {
+            /*
+            * Jarvis (re)launched MainActivity to launch voice recognition
+            */
+            start_speech_recognition();
+        }
     }
 
     @Override
     protected void onStart() {
         super.onStart();
+    }
+
+
+    private class MyRecognitionListener implements RecognitionListener {
+        Context ctx;
+
+        public MyRecognitionListener(Context context) {
+            ctx = context;
+        }
+
+        public void onBeginningOfSpeech() {
+            Log.d("this", "onBeginningOfSpeech");
+        }
+
+        public void onBufferReceived(byte[] buffer) {
+            Log.d("this", "onBufferReceived");
+        }
+
+        public void onEndOfSpeech() {
+            Log.d("this", "onEndOfSpeech");
+        }
+
+        public void onError(int error) {
+            Log.d("this", "onError: " + String.valueOf(error));
+            Intent intent = new Intent(ctx, Jarvis.class);
+            intent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_VOICE_RECOGNITION_RESULT);
+            intent.putExtra(MyReceiver.EXTRA_VALUE, (String)null);
+            MyReceiver.startWakefulService(ctx, intent);
+            finish();
+
+        }
+
+        public void onEvent(int eventType, Bundle params) {
+            Log.d("this", "onEvent");
+        }
+
+        public void onPartialResults(Bundle partialResults) {
+            Log.d("this", "onPartialResults");
+        }
+
+        public void onReadyForSpeech(Bundle params) {
+            Log.d("this", "onReadyForSpeech");
+        }
+
+        public void onResults(Bundle results) {
+            Log.d("this", "onResults");
+            ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+            String firstMatch = matches.get(0);
+            Intent intent = new Intent(ctx, Jarvis.class);
+            intent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_VOICE_RECOGNITION_RESULT);
+            intent.putExtra(MyReceiver.EXTRA_VALUE, firstMatch);
+            MyReceiver.startWakefulService(ctx, intent);
+            finish();
+
+        }
+
+        public void onRmsChanged(float rmsdB) {
+            //Log.d("this", "onRmsChanged");
+        }
+    }
+    private void start_speech_recognition() {
+
+        SpeechRecognizer sr = SpeechRecognizer.createSpeechRecognizer(this);
+        sr.setRecognitionListener(myRecognitionListener);
+
+
+        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        //intent.putExtra(RecognizerIntent.EXTRA_PROMPT,
+          //      "Please speak slowly and enunciate clearly.");
+        sr.startListening(intent);
+        //startActivityForResult(intent, VOICE_RECOGNITION_REQUEST);
+
     }
 
 
@@ -82,25 +172,38 @@ public class MainActivity extends ActionBarActivity {
         tv.setText(message);
     }
 
-    private void start_speech_recognition() {
-        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-        intent.putExtra(RecognizerIntent.EXTRA_PROMPT,
-                "Please speak slowly and enunciate clearly.");
-        startActivityForResult(intent, VOICE_RECOGNITION_REQUEST);
-    }
-
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        String firstMatch;
-        if (requestCode == VOICE_RECOGNITION_REQUEST && resultCode == RESULT_OK) {
-            ArrayList<String> matches = data
-                    .getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
-            firstMatch = matches.get(0);
+        String firstMatch = null;
+        if (requestCode == VOICE_RECOGNITION_REQUEST) {
+            if (resultCode == RESULT_OK) {
+                ArrayList<String> matches = data
+                        .getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+                firstMatch = matches.get(0);
+            }
+
+            Intent intent = new Intent(this, Jarvis.class);
+            intent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_VOICE_RECOGNITION_RESULT);
+            intent.putExtra(MyReceiver.EXTRA_VALUE, firstMatch);
+            MyReceiver.startWakefulService(this, intent);
+            finish();
+
+            /* Run the match through VoCI
+            VoCI voci = new VoCI(this);
+            String action = voci.execute(firstMatch);
+
+            firstMatch += "\nAction=" + action;
+            firstMatch += "\nGroup_count=" + String.valueOf(voci.groupCount);
+            if (voci.groupCount >= 1) {
+                firstMatch += "\narg1=" + voci.arg1;
+            }
+            if (voci.groupCount >= 2) {
+                firstMatch += "\narg2=" + voci.arg2;
+            }
 
             TextView tv = (TextView)findViewById(R.id.hello_world);
             tv.setText(firstMatch);
+            */
         }
     }
 
@@ -205,7 +308,11 @@ public class MainActivity extends ActionBarActivity {
         } else if (id == R.id.action_get_bills) {
             get_bill_payments();
         } else if (id == R.id.action_start_SR) {
-            start_speech_recognition();
+            //start_speech_recognition();
+            Intent i = new Intent(this, Jarvis.class);
+            i.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_START_VOICE_RECOGNITION);
+            //i.putExtra(MyReceiver.EXTRA_FORCE_PLAY, true);
+            MyReceiver.startWakefulService(this, i);
         }
 
 

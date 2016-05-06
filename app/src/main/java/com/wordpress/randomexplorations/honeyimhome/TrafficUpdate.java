@@ -164,10 +164,10 @@ public class TrafficUpdate extends AsyncTask<URL, Void, Void> {
         String message = null;
         if (travel_time != null) {
             // We were able to fetch weather
-            message = "Given the traffic at this time, you would reach " + destination_name +
+            message = "We should reach " + destination_name +
                        " in around " + travel_time;
         } else {
-            message = "Could not get traffic update.";
+            message = "Traffic update is not available.";
         }
 
         List<String> list = new ArrayList();

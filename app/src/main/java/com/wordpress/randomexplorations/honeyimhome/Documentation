@@ -1,0 +1,16 @@
+1. Voice commands interpretation
+================================
+
+The android speech recognizer can be invoked only from an application's main thread.
+Steps for invoking speech recognition:
+ a) Jarvis launches MainActivity with an Intent's EXTRA_PURPOSE = EXTRA_PURPOSE_START_VOICE_RECOGNITION
+ b) MainActivity is launched as a separate instance.
+ c) It checks for EXTRA_PURPOSE=VOICE_RECOGNITION, and launches the speech recognizer.
+ d) MainActivity collects the voice recognition results (first match, valid or null string)
+ e) MainActivity sends the results to Jarvis using EXTRA_PURPOSE_VOICE_RECOGNITION_RESULT
+ f) MainActivity kills itself (deliberately) to avoid loose hanging instances.
+
+Note that, to test speech-recognition, main activity provided a menu option.
+The test, launches Jarvis as wakeful service with  EXTRA_PURPOSE_START_VOICE_RECOGNITION
+Jarvis loops back the same purpose while launching MainActivity to start speech recognition.
+

@@ -61,6 +61,8 @@ public class MyReceiver extends WakefulBroadcastReceiver {
     public static final int EXTRA_PURPOSE_FETCH_NEWS = 6;
     public static final int EXTRA_PURPOSE_WIFI_STATE_CHANGE = 7;
     public static final int EXTRA_PURPOSE_TIME_TO_DESTINATION = 8;
+    public static final int EXTRA_PURPOSE_START_VOICE_RECOGNITION = 9;
+    public static final int EXTRA_PURPOSE_VOICE_RECOGNITION_RESULT = 10;
 
     public static final String AM_IN_CAR = "com.wordpress.randomexplorations.honeyimhome.am_in_car";
 
@@ -151,12 +153,22 @@ public class MyReceiver extends WakefulBroadcastReceiver {
 
     }
 
+    /*
+    private void test_speech_recognition(Context context) {
+        Intent i = new Intent(context, Jarvis.class);
+        i.putExtra(EXTRA_PURPOSE, EXTRA_PURPOSE_START_VOICE_RECOGNITION);
+        startWakefulService(context, i);
+    }
+    */
+
     private void handle_sms_actions(Context context, Intent intent, SharedPreferences prefs) {
 
         String action = intent.getAction();
         if (!Telephony.Sms.Intents.SMS_RECEIVED_ACTION.equals(action)) {
             return;
         }
+
+        //test_speech_recognition(context);
 
         final Bundle bundle = intent.getExtras();
 

@@ -16,6 +16,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Vibrator;
 import android.preference.PreferenceManager;
+import android.speech.RecognizerIntent;
 import android.support.v4.app.NotificationCompat;
 import android.telephony.SmsManager;
 import android.util.Log;
@@ -652,6 +653,13 @@ public class Jarvis extends IntentService {
 
     }
 
+    private void start_voice_recognition() {
+        Intent intent = new Intent(this, MainActivity.class);
+        intent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_START_VOICE_RECOGNITION);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(intent);
+    }
+
     public void processIntent() {
 
         SharedPreferences prefs =
@@ -714,6 +722,23 @@ public class Jarvis extends IntentService {
 
             case MyReceiver.EXTRA_PURPOSE_WIFI_STATE_CHANGE:
                 handle_wifi_state_change();
+                break;
+
+            /*
+            * Test command from Main-activity menu options
+             */
+            case MyReceiver.EXTRA_PURPOSE_START_VOICE_RECOGNITION:
+                start_voice_recognition();
+                cleanupIntent();  //@todo: Service may die here!!!
+                break;
+
+            case MyReceiver.EXTRA_PURPOSE_VOICE_RECOGNITION_RESULT:
+                String msg = runningIntent.getStringExtra(MyReceiver.EXTRA_VALUE);
+                runningIntent.putExtra(MyReceiver.EXTRA_FORCE_PLAY, true);
+                if (msg == null) {
+                    msg = "Voice not recognized";
+                }
+                play_message(msg);
                 break;
 
             default:
