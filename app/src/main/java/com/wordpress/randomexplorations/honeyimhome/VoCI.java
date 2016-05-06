@@ -21,6 +21,11 @@ public class VoCI {
 
     public static final String VOCI_ACTION_INVALID = "VOCI_ACTION_INVALID";
     public static final String VOCI_ACTION_PLAY = "VOCI_ACTION_PLAY";
+    public static final String VOCI_REPEAT_LAST_MESSAGE = "VOCI_REPEAT_LAST_MESSAGE";
+    public static final String VOCI_SMS_TO_HUBBY = "VOCI_SMS_TO_HUBBY";
+    public static final String VOCI_REPEAT_SENT_MESSAGE = "VOCI_REPEAT_SENT_MESSAGE";
+    public static final String VOCI_FETCH_WEATHER = "VOCI_FETCH_WEATHER";
+    public static final String VOCI_REPEAT_REJECTED_REQUEST = "VOCI_REPEAT_REJECTED_REQUEST";
 
 
     public VoCI(Context ctx) {

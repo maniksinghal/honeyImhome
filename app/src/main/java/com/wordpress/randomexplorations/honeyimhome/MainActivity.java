@@ -39,7 +39,7 @@ public class MainActivity extends ActionBarActivity {
         tv.setText("Hit Settings to make changes");
 
         Intent intent = getIntent();
-        int value = intent.getIntExtra("purpose", -1);
+        int value = intent.getIntExtra(MyReceiver.EXTRA_PURPOSE, -1);
         tv.setText("Activity started with value: " + String.valueOf(value));
 
         if (value == MyReceiver.EXTRA_PURPOSE_START_VOICE_RECOGNITION) {
@@ -122,6 +122,7 @@ public class MainActivity extends ActionBarActivity {
         Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
                 RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 2000);
         //intent.putExtra(RecognizerIntent.EXTRA_PROMPT,
           //      "Please speak slowly and enunciate clearly.");
         sr.startListening(intent);

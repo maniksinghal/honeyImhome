@@ -26,6 +26,10 @@ public class MyReceiver extends WakefulBroadcastReceiver {
 
     public static final String EXTRA_PURPOSE = "com.wordpress.randomexplorations.honeyimhome.purpose";
     public static final String EXTRA_VALUE = "com.wordpress.randomexplorations.honeyimhome.play_message";
+
+    // flag to specify whether to store the last played message in shared preferences
+    public static final String EXTRA_STORE_MSG = "com.wordpress.randomexplorations.honeyimhome.store_message";
+
     public static final String EXTRA_IS_WEATHER_UPDATE =
             "com.wordpress.randomexplorations.honeyimhome.weather_update";
     public static final String EXTRA_IS_NEWS_UPDATE =
@@ -63,6 +67,8 @@ public class MyReceiver extends WakefulBroadcastReceiver {
     public static final int EXTRA_PURPOSE_TIME_TO_DESTINATION = 8;
     public static final int EXTRA_PURPOSE_START_VOICE_RECOGNITION = 9;
     public static final int EXTRA_PURPOSE_VOICE_RECOGNITION_RESULT = 10;
+    public static final int EXTRA_PURPOSE_SMS_RECEIVED = 11;
+    public static final int EXTRA_PURPOSE_CONVERSATION_RUNNING = 12;
 
     public static final String AM_IN_CAR = "com.wordpress.randomexplorations.honeyimhome.am_in_car";
 
@@ -223,7 +229,7 @@ public class MyReceiver extends WakefulBroadcastReceiver {
 
         // Time to play it
         Intent i = new Intent(context, Jarvis.class);
-        i.putExtra(EXTRA_PURPOSE, EXTRA_PURPOSE_MESSAGE_TO_PLAY);
+        i.putExtra(EXTRA_PURPOSE, EXTRA_PURPOSE_SMS_RECEIVED);
         i.putExtra(EXTRA_VALUE, message_to_play);
         startWakefulService(context, i);
 

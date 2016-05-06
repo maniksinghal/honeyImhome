@@ -44,7 +44,7 @@
         android:summary="Message to play on speak-out" />
     <CheckBoxPreference
         android:key="@string/always_speak_out"
-        android:title="Incoming Hubby's messages"
+        android:title="Incoming hubby's messages/notifications"
         android:summaryOff="Speaking only when connected to car stereo"
         android:summaryOn="Always speaking out"  />
     <CheckBoxPreference

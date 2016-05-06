@@ -15,6 +15,7 @@ import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Vibrator;
+import android.preference.EditTextPreference;
 import android.preference.PreferenceManager;
 import android.speech.RecognizerIntent;
 import android.support.v4.app.NotificationCompat;
@@ -39,6 +40,9 @@ public class Jarvis extends IntentService {
 
     private boolean wifi_connected = false;
     private String last_wifi_connected = null;
+
+    public static final int MAX_RECOGNITION_RETRY = 3;
+    private int recognition_retry = MAX_RECOGNITION_RETRY;
 
     private Timer wifi_timer = null;
 
@@ -251,6 +255,25 @@ public class Jarvis extends IntentService {
                 return START_NOT_STICKY;
             }
         }
+
+        if (purpose == MyReceiver.EXTRA_PURPOSE_VOICE_RECOGNITION_RESULT) {
+            if (runningIntent != null) {
+                // Should always be the case
+
+                /*
+                * We were waiting for voice recognition result with runningIntent = CONV_RUNNING
+                * Need to start processing VOICE_RECOGNITION_RESULT, but keep CONV_RUNNING in the
+                * queue (as it holds the wake-lock for the service) and also for further listens
+                 */
+                workList.add(0, runningIntent);
+                workList.add(0, intent);
+                cleanupIntent();
+                return START_NOT_STICKY;
+            }
+
+        }
+
+
 
         workList.add(intent);
         if (runningIntent == null) {
@@ -487,6 +510,14 @@ public class Jarvis extends IntentService {
 
         }
     }
+
+
+    private void send_sms_to_hubby(String message) {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        String phone = prefs.getString(getString(R.string.hubby_phone_number), "0000");
+        SmsManager smsManager = SmsManager.getDefault();
+        smsManager.sendTextMessage(phone, null, message, null, null);
+    }
     /*
     * User just connected to car stereo
     */
@@ -526,10 +557,8 @@ public class Jarvis extends IntentService {
         String message = null;
         am_i_leaving_office = leaving_office();
         if (am_i_leaving_office) {
-            String phone = prefs.getString(getString(R.string.hubby_phone_number), "0000");
             message = prefs.getString(getString(R.string.connect_message), "empty");
-            SmsManager smsManager = SmsManager.getDefault();
-            smsManager.sendTextMessage(phone, null, message, null, null);
+            send_sms_to_hubby(message);
 
             message = "Informed ";
             message += prefs.getString(getString(R.string.hubby_name), null);
@@ -597,16 +626,24 @@ public class Jarvis extends IntentService {
     }
 
 
-    private void play_message(String message) {
+    private void play_message(String message, boolean store) {
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         Boolean use_sco = prefs.getBoolean(getString(R.string.bluetooth_sco), false);
         Log.d("this", "Jarvis: Playing " + message + " with use_sco: " + use_sco);
 
+        if (store) {
+            // Store the message as well
+            SharedPreferences.Editor editor = prefs.edit();
+            editor.putString(getString(R.string.repeat_last_message), message);
+            editor.commit();
+        }
+
         if (!connected_to_car &&
                 !runningIntent.getBooleanExtra(MyReceiver.EXTRA_FORCE_PLAY, false)) {
             // Should play this message only if user allows playing all messages
             if (!prefs.getBoolean(getString(R.string.always_speak_out), false)) {
+                Log.d("this", "NOT PLAYING " + message + " as not connected to car and FORCE option not ON");
                 cleanupIntent();
                 return;
             }
@@ -639,6 +676,10 @@ public class Jarvis extends IntentService {
 
     }
 
+    private void play_message(String message) {
+        play_message(message, true);
+    }
+
     public void handle_wifi_state_change() {
 
         int interval = 2000; // 2 seconds
@@ -660,8 +701,116 @@ public class Jarvis extends IntentService {
         startActivity(intent);
     }
 
+    /*
+    * Function to handle the decoded voice command
+    * At this stage, we have runningIntent = VoiceCommandResult, and
+    * CONVERSATION_RUNNING intent pending in the queue
+     */
+    private void handle_voice_command(String message)
+    {
+        VoCI voci = new VoCI(this);
+        String action = voci.execute(message);
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+
+        Log.d("this", "Recognized following message: " + message);
+
+
+        if (action.equals(VoCI.VOCI_ACTION_INVALID)) {
+            // Could not interpret the command, try again
+
+            // Store the last rejected request
+            SharedPreferences.Editor editor = prefs.edit();
+            editor.putString(getString(R.string.repeat_rejected_request), message);
+            editor.commit();
+
+            // Change intent-purpose to play-message
+            String retry_msg = "I Don't know how to handle the request";
+            runningIntent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_MESSAGE_TO_PLAY);
+            runningIntent.putExtra(MyReceiver.EXTRA_VALUE, retry_msg);
+            runningIntent.putExtra(MyReceiver.EXTRA_STORE_MSG, false);
+            play_message(retry_msg, false);  // This will play message and pick up CONV_RUNNING intent
+
+            Log.d("this", "Could not interpret action from message");
+            return;
+        } else {
+            // Successfully interpreted the action
+            recognition_retry = MAX_RECOGNITION_RETRY;
+        }
+
+        /* Found recognizable action */
+
+        // Some actions are handled by Jarvis itself
+        if (action.equals(VoCI.VOCI_REPEAT_LAST_MESSAGE)) {
+            Log.d("this", "action: repeat last message");
+            String last_msg = prefs.getString(getString(R.string.repeat_last_message), "Last message not found");
+            last_msg = "This is the last message I played, " + last_msg;
+            runningIntent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_MESSAGE_TO_PLAY);
+            runningIntent.putExtra(MyReceiver.EXTRA_VALUE, last_msg);
+            play_message(last_msg, false);  // This will play message and pick up CONV_RUNNING intent
+
+        } else if (action.equals(VoCI.VOCI_REPEAT_REJECTED_REQUEST)) {
+            String last_msg = prefs.getString(getString(R.string.repeat_rejected_request), "Last rejected request not found");
+            last_msg = "This is the last request I could not understand, " + last_msg;
+            runningIntent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_MESSAGE_TO_PLAY);
+            runningIntent.putExtra(MyReceiver.EXTRA_VALUE, last_msg);
+            play_message(last_msg, false);  // This will play message and pick up CONV_RUNNING intent
+
+        } else if (action.equals(VoCI.VOCI_SMS_TO_HUBBY)) {
+            if (voci.arg1 != null && !voci.arg1.isEmpty()) {
+                // arg1 is the actual message to send
+                send_sms_to_hubby(voci.arg1);
+                Log.d("this", "action: Send sms to hubby: " + voci.arg1);
+
+                // Store the last message sent
+                SharedPreferences.Editor editor = prefs.edit();
+                editor.putString(getString(R.string.repeat_sent_message), voci.arg1);
+                editor.commit();
+
+                message = "Ok, Sent the message as you requested";
+
+                runningIntent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_MESSAGE_TO_PLAY);
+                runningIntent.putExtra(MyReceiver.EXTRA_VALUE, message);
+                play_message(message, false);  // This will play message and pick up CONV_RUNNING intent
+
+
+            } else {
+                message = "Could not understand the message you want to send";
+                runningIntent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_MESSAGE_TO_PLAY);
+                runningIntent.putExtra(MyReceiver.EXTRA_VALUE, message);
+                play_message(message, false);  // This will play message and pick up CONV_RUNNING intent
+
+            }
+        } else if (action.equals(VoCI.VOCI_REPEAT_SENT_MESSAGE)) {
+
+
+            String last_msg = prefs.getString(getString(R.string.repeat_sent_message), "Last sent message not found");
+            last_msg = "This is the last message I sent, " + last_msg;
+            Log.d("this", "action: repeat sent message : " + last_msg);
+            runningIntent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_MESSAGE_TO_PLAY);
+            runningIntent.putExtra(MyReceiver.EXTRA_VALUE, last_msg);
+            play_message(last_msg, false);  // This will play message and pick up CONV_RUNNING intent
+
+        } else if (action.equals(VoCI.VOCI_FETCH_WEATHER)) {
+            Log.d("this", "action: Weather update");
+            String woeid = prefs.getString(getString(R.string.weather_woeid), "0");
+            new WeatherUpdate(this, woeid).execute(null, null, null);
+
+        } else {
+            // Default case
+            Log.d("this", "No action associated with interpreted voice command");
+            message = "I Did not understand the request, some internal error!!";
+            runningIntent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_MESSAGE_TO_PLAY);
+            runningIntent.putExtra(MyReceiver.EXTRA_VALUE, message);
+            runningIntent.putExtra(MyReceiver.EXTRA_STORE_MSG, false);
+            play_message(message, false);  // This will play message and pick up CONV_RUNNING intent
+        }
+
+        return;
+    }
+
     public void processIntent() {
 
+        String message = null;
         SharedPreferences prefs =
                 PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         int purpose = runningIntent.getIntExtra(MyReceiver.EXTRA_PURPOSE,
@@ -670,9 +819,10 @@ public class Jarvis extends IntentService {
         Log.d("this", "Processing intent with purpose: " + purpose);
         switch(purpose) {
             case MyReceiver.EXTRA_PURPOSE_MESSAGE_TO_PLAY:
-                String message = runningIntent.getStringExtra(MyReceiver.EXTRA_VALUE);
+                message = runningIntent.getStringExtra(MyReceiver.EXTRA_VALUE);
+                boolean store = runningIntent.getBooleanExtra(MyReceiver.EXTRA_STORE_MSG, true);
                 if (message != null) {
-                    play_message(message);
+                    play_message(message, store);
                 } else {
                     cleanupIntent();
                 }
@@ -720,6 +870,42 @@ public class Jarvis extends IntentService {
                 new NewsUpdate(this).execute(null, null, null);
                 break;
 
+            case MyReceiver.EXTRA_PURPOSE_SMS_RECEIVED:
+                /*
+                * Play the current message, but also queue an intent to start the
+                * conversation.
+                * Since the current (SMS) intent is wakeful, so we set it as the conversation
+                * intent, and enqueue a new intent for playing the message.
+                */
+                message = runningIntent.getStringExtra(MyReceiver.EXTRA_VALUE);
+                Intent i = new Intent();
+                i.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_MESSAGE_TO_PLAY);
+                i.putExtra(MyReceiver.EXTRA_VALUE, message);
+
+                runningIntent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_CONVERSATION_RUNNING);
+                recognition_retry = MAX_RECOGNITION_RETRY;
+                workList.add(runningIntent);
+
+                runningIntent = i;
+                play_message(message);
+                break;
+
+            case MyReceiver.EXTRA_PURPOSE_CONVERSATION_RUNNING:
+                if (recognition_retry > 0) {
+                    recognition_retry--;
+
+                    /* Hold the runningIntent active so that any other interfering events are only queued
+                     * in the workList, and not processed.
+                     */
+                    Log.d("this", "Starting voice recognition, retry-count: " + recognition_retry);
+                    start_voice_recognition();  //Main activity will call us back
+                } else {
+                    // User stopped speaking or couldn't get what he is saying in max retries
+                    Log.d("this", "User stopped speaking, or max-retries, closing listener");
+                    cleanupIntent();
+                }
+                break;
+
             case MyReceiver.EXTRA_PURPOSE_WIFI_STATE_CHANGE:
                 handle_wifi_state_change();
                 break;
@@ -728,17 +914,28 @@ public class Jarvis extends IntentService {
             * Test command from Main-activity menu options
              */
             case MyReceiver.EXTRA_PURPOSE_START_VOICE_RECOGNITION:
+                Log.d("this", "Starting voice recognition as per UI command...");
+                runningIntent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_CONVERSATION_RUNNING);
+                recognition_retry = MAX_RECOGNITION_RETRY;
                 start_voice_recognition();
-                cleanupIntent();  //@todo: Service may die here!!!
                 break;
 
+            /*
+            * We should receive this only if our previously runningIntent was
+            * CONVERSATION_RUNNING. We would have enqueued that intent again and
+            * would be processing this intent now.
+             */
             case MyReceiver.EXTRA_PURPOSE_VOICE_RECOGNITION_RESULT:
                 String msg = runningIntent.getStringExtra(MyReceiver.EXTRA_VALUE);
-                runningIntent.putExtra(MyReceiver.EXTRA_FORCE_PLAY, true);
                 if (msg == null) {
-                    msg = "Voice not recognized";
+                    // @todo: See if we want to alert user here!!
+                    // Pick the CONVERSATION_RUNNING intent from the queue and process again
+                    // if retry-count is left.
+                    Log.d("this", "Voice recognition results: Null message");
+                    cleanupIntent();
+                } else {
+                    handle_voice_command(msg);
                 }
-                play_message(msg);
                 break;
 
             default:

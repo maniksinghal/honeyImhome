@@ -5,5 +5,36 @@
         <match>This is content (.*)</match>
         <match>This is nothing (.*) and (.*)</match>
     </group>
+    <group name="play_rejected_request">
+        <action name="VOCI_REPEAT_REJECTED_REQUEST"></action>
+        <match>.*repeat.*last.*not.*underst.*</match>
+        <match>.*repeat.*last.*reject.*</match>
+        <match>.*what.*last.*reject.*</match>
+        <match>.*what.*last.*not.*underst.*</match>
+    </group>
+    <group name="repeat_sent_message">  <!-- keep this above repeat_last_message -->
+        <action name="VOCI_REPEAT_SENT_MESSAGE"></action>
+        <match>.*repeat.*last.*message.*sent.*</match>
+        <match>.*what.*last.*message.*sent.*</match>
+        <match>.*what.*message.*sent.*</match>
+        <match>.*what.*message.*did.*send.*</match>
+    </group>
+    <group name="repeat_last_message">
+        <action name="VOCI_REPEAT_LAST_MESSAGE"></action>
+        <match>.*repeat.*last.*message.*</match>
+        <match>.*what.*last.*message.*</match>
+    </group>
+    <group name="text_to_hubby">
+        <action name="VOCI_SMS_TO_HUBBY"></action>
+        <match>.*reply.*her.*saying(.*)</match>
+        <match>.*send.*her.*saying(.*)</match>
+        <match>.*send.*wife.*saying(.*)</match>
+    </group>
+    <group name="weather">
+        <action name="VOCI_FETCH_WEATHER"></action>
+        <match>.*how.*weather.*</match>
+    </group>
+
+
 
 </all>

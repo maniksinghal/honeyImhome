@@ -22,6 +22,9 @@
     <string name="office_wifi">office-wifi</string>
     <string name="home_wifi">home-wifi</string>
     <string name="reminder_tone">reminder tone</string>
+    <string name="repeat_last_message">repeat_last_message</string>
+    <string name="repeat_sent_message">repeat_sent_message</string>
+    <string name="repeat_rejected_request">repeat_rejected_request</string>
     <string name="office_loc">Office location</string>
     <string name="home_loc">Home location</string>
     <string name="week_start_reminder">week_start_reminder</string>
