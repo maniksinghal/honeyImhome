@@ -595,8 +595,8 @@ public class Jarvis extends IntentService {
             i.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_TIME_TO_DESTINATION);
             String orig = prefs.getString(getString(R.string.office_loc), "0000");
             String dest = prefs.getString(getString(R.string.home_loc), "0000");
-            i.putExtra(MyReceiver.EXTRA_ORIG_LOCATION, "orig");
-            i.putExtra(MyReceiver.EXTRA_DEST_LOCATION, "dest");
+            i.putExtra(MyReceiver.EXTRA_ORIG_LOCATION, orig);
+            i.putExtra(MyReceiver.EXTRA_DEST_LOCATION, dest);
             i.putExtra(MyReceiver.EXTRA_DEST_NAME, "home");
             i.putExtra(MyReceiver.EXTRA_NON_WAKEFUL, true);
             workList.add(insert_location, i);
@@ -714,6 +714,13 @@ public class Jarvis extends IntentService {
 
         Log.d("this", "Recognized following message: " + message);
 
+        /*
+        * We were successfully able to decode the voice.
+        * We may not be able to decode the message, but we leave it to the user
+        * to try as much as he/she wants.
+         */
+        recognition_retry = MAX_RECOGNITION_RETRY;
+
 
         if (action.equals(VoCI.VOCI_ACTION_INVALID)) {
             // Could not interpret the command, try again
@@ -732,10 +739,8 @@ public class Jarvis extends IntentService {
 
             Log.d("this", "Could not interpret action from message");
             return;
-        } else {
-            // Successfully interpreted the action
-            recognition_retry = MAX_RECOGNITION_RETRY;
         }
+
 
         /* Found recognizable action */
 
