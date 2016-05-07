@@ -45,13 +45,5 @@
         <item>Home speaker</item>
         <item>Laptop</item>
     </string-array>
-    <string-array name="sco_modes">
-        <item>IN CALL</item>
-        <item>IN COMMUNICATION</item>
-    </string-array>
-    <string-array name="sco_mode_values">
-        <item>2</item>
-        <item>3</item>
-    </string-array>
     <string name="title_activity_settings">SettingsActivity</string>
 </resources>

@@ -36,11 +36,14 @@ public class Jarvis extends IntentService {
     private Intent runningIntent = null;  // currently running intent
     private List<Intent> workList = null;
     private boolean connected_to_car = false;
-    private String current_wifi_ssid = null;
 
     private boolean wifi_connected = false;
     private String last_wifi_connected = null;
 
+    /*
+    * How many times to retry listening to user during
+    * voice conversation.
+     */
     public static final int MAX_RECOGNITION_RETRY = 3;
     private int recognition_retry = MAX_RECOGNITION_RETRY;
 
@@ -570,11 +573,8 @@ public class Jarvis extends IntentService {
             editor.putLong(MyReceiver.EXTRA_LAST_WIFI_EVENT_TIMESTAMP, 0);
             editor.commit();
 
-        } else {
-            // Just print a regular welcome message
-            message = prefs.getString(getString(R.string.welcome_message), null);
-            i.putExtra(MyReceiver.EXTRA_VALUE, message);
         }
+
         Log.d("this", "Jarvis: Enqueuing message: '" + message + "' for play");
         workList.add(insert_location, i);
         insert_location++;
@@ -618,7 +618,9 @@ public class Jarvis extends IntentService {
         connected_to_car = true;
         // Keep the car-connected intent to hold the wakelock, so that the sub-intents can run
         // without any issue
-        runningIntent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_INVALID); // now nop
+        // Change it to CONV_RUNNING to trigger listening to voice command from user.
+        runningIntent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_CONVERSATION_RUNNING);
+        recognition_retry = MAX_RECOGNITION_RETRY;
         workList.add(insert_location, runningIntent);  // re-queue after above intents.
         runningIntent = null;  // so that it does not get wake-lock-released by cleanupIntent
         cleanupIntent();  // Cleanup current 'connect-to-car' intent and pick up first child-intent
@@ -652,13 +654,12 @@ public class Jarvis extends IntentService {
 
 
         if (!speaker.ready) {
-            int sco_mode = Integer.parseInt(prefs.getString(getString(R.string.sco_mode), null));
             if (!connected_to_car) {
                 // Can't use SCO
                 Log.d("this", "Not using SCO as not connected to car");
                 use_sco = false;
             }
-            speaker.initialize(use_sco, sco_mode);  // Initializer will call us back
+            speaker.initialize(use_sco);  // Initializer will call us back
             return;
         }
 
@@ -705,6 +706,9 @@ public class Jarvis extends IntentService {
     * Function to handle the decoded voice command
     * At this stage, we have runningIntent = VoiceCommandResult, and
     * CONVERSATION_RUNNING intent pending in the queue
+    *
+    * This function should trigger an eventual cleanup of the current
+    * VoiceCommandResult running Intent.
      */
     private void handle_voice_command(String message)
     {
@@ -800,6 +804,11 @@ public class Jarvis extends IntentService {
             String woeid = prefs.getString(getString(R.string.weather_woeid), "0");
             new WeatherUpdate(this, woeid).execute(null, null, null);
 
+        } else if (action.equals(VoCI.VOCI_END_SESSION)) {
+            Log.d("this", "action: End session");
+            recognition_retry = 0;  // No more retries for voice recognition
+            cleanupIntent();  // Cleanup this intent and pick CONV_RUNNING intent which should also clean-up
+
         } else {
             // Default case
             Log.d("this", "No action associated with interpreted voice command");
@@ -834,12 +843,11 @@ public class Jarvis extends IntentService {
                 break;
 
             case MyReceiver.EXTRA_PURPOSE_START_SCO:
-                int sco_mode = Integer.parseInt(prefs.getString(getString(R.string.sco_mode), null));
 
                 // Override purpose to play success message
                 runningIntent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_MESSAGE_TO_PLAY);
                 runningIntent.putExtra(MyReceiver.EXTRA_VALUE, "SCO initialization success");
-                boolean status = speaker.initialize_sco(sco_mode);
+                boolean status = speaker.initialize_sco();
                 if (!status) {
                     cleanupIntent();
                 }
@@ -906,7 +914,10 @@ public class Jarvis extends IntentService {
                     start_voice_recognition();  //Main activity will call us back
                 } else {
                     // User stopped speaking or couldn't get what he is saying in max retries
-                    Log.d("this", "User stopped speaking, or max-retries, closing listener");
+                    Log.d("this", "User stopped speaking, or politely asked us to stop listening, closing listener");
+
+                    // Fill up recognition retries for next time
+                    recognition_retry = MAX_RECOGNITION_RETRY;
                     cleanupIntent();
                 }
                 break;

@@ -34,6 +34,14 @@
         <action name="VOCI_FETCH_WEATHER"></action>
         <match>.*how.*weather.*</match>
     </group>
+    <group name="end_session">
+        <action name="VOCI_END_SESSION"></action>
+        <match>.*thank.*Susan</match>
+        <match>.*that.*be.*all.*Susan</match>
+        <match>.*susan.*that.*be.*all.*</match>
+        <match>.*switch.*radio.*</match>
+        <match>.*never.*mind</match>
+    </group>
 
 
 

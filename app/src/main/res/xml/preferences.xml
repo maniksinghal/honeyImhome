@@ -20,23 +20,8 @@
         android:defaultValue="Not-set" />
     <EditTextPreference
         android:key="@string/connect_message"
-        android:title="Message on stereo connect"
+        android:title="Message to hubby when leaving office"
         android:defaultValue="Leaving office right now. What's ur status?" />
-    <EditTextPreference
-        android:key="@string/disconnect_message"
-        android:title="Message on stereo disconnect"
-        android:defaultValue="Reached home" />
-    <EditTextPreference
-        android:key="@string/time_slot"
-        android:title="Time slot"
-        android:defaultValue="After 4pm on weekdays (fixed)"
-        android:enabled="false"
-        android:summary="After 4pm on weekdays (fixed)" />
-    <EditTextPreference
-        android:key="@string/welcome_message"
-        android:title="Welcome message on car stereo connect"
-        android:defaultValue="Your phone is now connected to the car stereo."
-        android:summary="Message to play when car stereo is connected" />
     <EditTextPreference
         android:key="@string/test_message"
         android:title="Test message"
@@ -52,13 +37,6 @@
         android:title="Bluetooth SCO"
         android:summaryOff="Using device audio stream"
         android:summaryOn="Use bluetooth SCO for audio" />
-    <ListPreference
-        android:dependency="@string/bluetooth_sco"
-        android:key="@string/sco_mode"
-        android:title="Bluetoooth SCO mode to use"
-        android:entries="@array/sco_modes"
-        android:entryValues="@array/sco_mode_values"
-        android:defaultValue="2" />  <!-- Default AudioManager.MODE_IN_CALL -->
     <CheckBoxPreference
         android:key="@string/weather_update"
         android:title="Provide weather update"
@@ -67,7 +45,7 @@
     <EditTextPreference
         android:dependency="@string/weather_update"
         android:key="@string/weather_woeid"
-        android:title="WOEID"
+        android:title="Weather ID"
         android:defaultValue="1277333"
         android:summary="Yahoo weather service WOEID" />
     <EditTextPreference

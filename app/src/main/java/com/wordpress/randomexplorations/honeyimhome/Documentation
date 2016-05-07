@@ -14,3 +14,10 @@ Note that, to test speech-recognition, main activity provided a menu option.
 The test, launches Jarvis as wakeful service with  EXTRA_PURPOSE_START_VOICE_RECOGNITION
 Jarvis loops back the same purpose while launching MainActivity to start speech recognition.
 
+a) Handling voice recognition results:
+--------------------------------------
+When voice recognition is attempted (Jarvis:start_voice_recognition), Jarvis keeps a running-intent active with purpose EXTRA_PURPOSE_CONVERSATION_RUNNING. This prevents any other external events (intents) from interfering with the conversation process. This way, the conversation flow is kept simpler.
+This active running intent was originally, the externally received interrupt which triggered the recognition and should be carrying the wake-lock for the service.
+When the voice recognition results are received from the MainActivity, then Jarvis deliberately enqueues the recognition results followed by the originally running intent (EXTRA_PURPOSE_CONVERSATION_RUNNING) in the workList.
+This triggers fetching and processing voice recognition results in the event loop.
+The function handle_voice_commands processes the results and within it (eventually) triggers the cleanup of the intent so that the next time, the EXTRA_PURPOSE_CONVERSATION_RUNNING intent is picked up for further listening to the user.

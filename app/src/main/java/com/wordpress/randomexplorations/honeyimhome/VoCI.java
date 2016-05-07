@@ -26,6 +26,7 @@ public class VoCI {
     public static final String VOCI_REPEAT_SENT_MESSAGE = "VOCI_REPEAT_SENT_MESSAGE";
     public static final String VOCI_FETCH_WEATHER = "VOCI_FETCH_WEATHER";
     public static final String VOCI_REPEAT_REJECTED_REQUEST = "VOCI_REPEAT_REJECTED_REQUEST";
+    public static final String VOCI_END_SESSION = "VOCI_END_SESSION";
 
 
     public VoCI(Context ctx) {
