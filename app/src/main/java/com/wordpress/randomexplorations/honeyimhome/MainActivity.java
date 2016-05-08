@@ -18,14 +18,16 @@ import android.view.MenuItem;
 import android.widget.TextView;
 import android.speech.RecognizerIntent;
 
-import java.util.HashMap;
-import java.util.Locale;
 import java.util.ArrayList;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import android.text.method.ScrollingMovementMethod;
 
 
 public class MainActivity extends ActionBarActivity {
 
     private static final int VOICE_RECOGNITION_REQUEST = 0x0101;
+    private SpeechRecognizer sr;
     private MyRecognitionListener myRecognitionListener;
 
     @Override
@@ -36,6 +38,7 @@ public class MainActivity extends ActionBarActivity {
         myRecognitionListener = new MyRecognitionListener(this);
 
         TextView tv = (TextView)findViewById(R.id.hello_world);
+        tv.setMovementMethod(new ScrollingMovementMethod());
         tv.setText("Hit Settings to make changes");
 
         Intent intent = getIntent();
@@ -46,6 +49,7 @@ public class MainActivity extends ActionBarActivity {
             /*
             * Jarvis (re)launched MainActivity to launch voice recognition
             */
+            sr = SpeechRecognizer.createSpeechRecognizer(this);
             start_speech_recognition();
         }
     }
@@ -81,6 +85,7 @@ public class MainActivity extends ActionBarActivity {
             intent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_VOICE_RECOGNITION_RESULT);
             intent.putExtra(MyReceiver.EXTRA_VALUE, (String)null);
             MyReceiver.startWakefulService(ctx, intent);
+            sr.destroy();
             finish();
 
         }
@@ -105,6 +110,7 @@ public class MainActivity extends ActionBarActivity {
             intent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_VOICE_RECOGNITION_RESULT);
             intent.putExtra(MyReceiver.EXTRA_VALUE, firstMatch);
             MyReceiver.startWakefulService(ctx, intent);
+            sr.destroy();
             finish();
 
         }
@@ -115,7 +121,7 @@ public class MainActivity extends ActionBarActivity {
     }
     private void start_speech_recognition() {
 
-        SpeechRecognizer sr = SpeechRecognizer.createSpeechRecognizer(this);
+
         sr.setRecognitionListener(myRecognitionListener);
 
 
@@ -152,7 +158,7 @@ public class MainActivity extends ActionBarActivity {
         message += prefs.getString("citibank_credit_card", "Citibank credit card payment records not found");
 
         message += "\n\nBILLS:\n";
-        message += prefs.getString("bsnl_bill", "BSNL bill payment records not found");
+        message += prefs.getString("airtel_broadband_bill", "Airtel broadband bill payment records not found");
         message += "\n";
         message += prefs.getString("meha_vodafone_bill", "Meha Vodafone bill payment records not found");
         message += "\n";
@@ -212,6 +218,7 @@ public class MainActivity extends ActionBarActivity {
 
         AudioManager am = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        Log.d("this", "Fetching parameters...");
         int mode = am.getMode();
 
         String output_sample_rate = null;
@@ -236,8 +243,20 @@ public class MainActivity extends ActionBarActivity {
         message += "a2dp: " + a2dp_on + "\n";
         message += "sco_on: " + sco_on + "\n";
         message += "fixed_volume: " + fixed_volume + "\n\n";
+
+        message += "\n\nDumping Shared Preferences: \n";
         message += "last connected wifi SSID: " + prefs.getString(MyReceiver.EXTRA_LAST_WIFI_NAME, "<not-found>") + "\n";
         message += "wifi connection status: " + prefs.getBoolean(MyReceiver.EXTRA_LAST_WIFI_CONNECTED, false) + "\n";
+        message += MyReceiver.EXTRA_LAST_WIFI_EVENT_TIMESTAMP + " " + prefs.getLong(MyReceiver.EXTRA_LAST_WIFI_EVENT_TIMESTAMP, 0) + "\n";
+        message += "ride_start_time: " + prefs.getLong("ride_start_time", 0) + "\n";
+        message += "ride_end_time: " + prefs.getLong("ride_end_time", 0) + "\n";
+        message += getString(R.string.repeat_rejected_request) + ": " + prefs.getString(getString(R.string.repeat_rejected_request), "<Not found>") + "\n";
+        message += getString(R.string.repeat_sent_message) + ": " + prefs.getString(getString(R.string.repeat_sent_message), "<Not found>") + "\n";
+        message += getString(R.string.repeat_last_message) + ": " + prefs.getString(getString(R.string.repeat_last_message), "<Not found>") + "\n";
+        message += MyReceiver.AM_IN_CAR + ": " + prefs.getBoolean(MyReceiver.AM_IN_CAR, false) + "\n";
+
+
+
 
         /*
         smsParser obj = new smsParser(null, this);
@@ -246,9 +265,42 @@ public class MainActivity extends ActionBarActivity {
          */
 
         TextView tv = (TextView)findViewById(R.id.hello_world);
+        Log.d("this", "Setting parameters in textView");
         tv.setText(message);
 
         return;
+    }
+
+    private void clear_logging() {
+        try {
+            new ProcessBuilder()
+                    .command("logcat", "-c")
+                    .redirectErrorStream(true)
+                    .start();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        TextView tv = (TextView)findViewById(R.id.hello_world);
+        tv.setText("");
+    }
+
+    private void show_logging() {
+        try {
+            Process process = Runtime.getRuntime().exec("logcat -d");
+            BufferedReader bufferedReader = new BufferedReader(
+                    new InputStreamReader(process.getInputStream()));
+
+            StringBuilder log=new StringBuilder();
+            String line = "";
+            while ((line = bufferedReader.readLine()) != null) {
+                line += "\n";
+                log.append(line);
+            }
+            TextView tv = (TextView)findViewById(R.id.hello_world);
+            tv.setText(log.toString());
+        }
+        catch (Exception e) {}
     }
 
     @Override
@@ -314,6 +366,10 @@ public class MainActivity extends ActionBarActivity {
             i.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_START_VOICE_RECOGNITION);
             //i.putExtra(MyReceiver.EXTRA_FORCE_PLAY, true);
             MyReceiver.startWakefulService(this, i);
+        } else if (id == R.id.clear_logging) {
+            clear_logging();
+        } else if (id == R.id.show_logging) {
+            show_logging();
         }
 
 

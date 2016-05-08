@@ -696,6 +696,25 @@ public class Jarvis extends IntentService {
     }
 
     private void start_voice_recognition() {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        Boolean use_sco = prefs.getBoolean(getString(R.string.bluetooth_sco), false);
+
+        /*
+        * If voice recognition starts, then sometimes it picks up garbage
+        * voice from the ongoing car stereo music.
+        * If SCO is enabled, then start voice recognition after switching ON SCO
+        * This would give a better experience to the user by muting the stereo music and
+        * also allowing listening from the stereo, than the phone.
+         */
+        if (use_sco && !speaker.ready) {
+            Log.d("this", "Starting voice recognition after switching ON SCO\n");
+            /* Speaker shall call us back and lead to re-processing of CONV_RUNNING intent.
+             * This would lead to decrementing recognition-retry count, so compensate for it here */
+            recognition_retry++;
+            speaker.initialize(use_sco);  // speaker shall call us back and re-process CONV_RUNNING intent.
+            return;
+        }
+
         Intent intent = new Intent(this, MainActivity.class);
         intent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_START_VOICE_RECOGNITION);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);

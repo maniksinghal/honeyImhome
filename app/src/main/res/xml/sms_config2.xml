@@ -13,7 +13,7 @@
             <transaction type="besom_bill"/>
             <log text="Electricity (BESCOM) bill payment last made on #DATE"/>
         </message>
-        <message text=".*AIRTEL.*has been processed successfully.*">
+        <message text=".*AIRTEL.*BANGALORE.*processed.*">
             <transaction type="my_airtel_bill"/>
             <log text="My Airtel bill payment last made on #DATE"/>
         </message>
@@ -54,6 +54,10 @@
         <message text=".*Payment of.*received on your ICICI Bank Credit Card Account.*">
             <transaction type="icici_credit_card_bill"/>
             <log text="ICICI credit card payment last done on #DATE"/>
+        </message>
+        <message text=".*received.*08049537539 via.*">
+            <transaction type="airtel_broadband_bill"/>
+            <log text="Airtel broadband payment last done on #DATE"/>
         </message>
     </Sender>
 </all>

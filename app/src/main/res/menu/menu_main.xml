@@ -11,4 +11,6 @@
     <item android:id="@+id/action_get_params" android:title="Get params" />
     <item android:id="@+id/action_get_bills" android:title="Bill payment details" />
     <item android:id="@+id/action_start_SR" android:title="Start speech recognition" />
+    <item android:id="@+id/clear_logging" android:title="Clear logs" />
+    <item android:id="@+id/show_logging" android:title="Show logs" />
 </menu>

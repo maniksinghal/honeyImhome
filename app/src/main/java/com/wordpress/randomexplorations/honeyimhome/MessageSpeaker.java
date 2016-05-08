@@ -64,6 +64,7 @@ public class MessageSpeaker implements
                     scoMgr = null;
                 }
 
+                ready = true;
                 jarvis.processIntent();
             }
         }
