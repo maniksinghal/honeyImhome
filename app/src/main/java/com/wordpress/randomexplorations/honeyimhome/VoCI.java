@@ -18,6 +18,7 @@ public class VoCI {
     public String arg1 = null;
     public String arg2 = null;
     public int groupCount = 0;
+    public String user = null;
 
     public static final String VOCI_ACTION_INVALID = "VOCI_ACTION_INVALID";
     public static final String VOCI_ACTION_PLAY = "VOCI_ACTION_PLAY";
@@ -27,10 +28,12 @@ public class VoCI {
     public static final String VOCI_FETCH_WEATHER = "VOCI_FETCH_WEATHER";
     public static final String VOCI_REPEAT_REJECTED_REQUEST = "VOCI_REPEAT_REJECTED_REQUEST";
     public static final String VOCI_END_SESSION = "VOCI_END_SESSION";
+    public static final String VOCI_KEEP_LISTENING = "VOCI_KEEP_LISTENING";
 
 
-    public VoCI(Context ctx) {
+    public VoCI(Context ctx, String name) {
         context = ctx;
+        user = name;
         reset();
     }
 
@@ -43,6 +46,7 @@ public class VoCI {
     }
 
     private boolean match(String command, String pattern) {
+        pattern = pattern.replaceAll("#user", user);
         Pattern myPat = Pattern.compile(pattern, Pattern.CASE_INSENSITIVE);
         Matcher myMatcher = myPat.matcher(command);
         if (myMatcher.matches()) {

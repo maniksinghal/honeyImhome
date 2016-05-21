@@ -19,6 +19,15 @@
         android:entryValues="@array/paired_devices_values"
         android:defaultValue="Not-set" />
     <EditTextPreference
+        android:key="@string/voice_assistant"
+        android:title="Voice assistant's name"
+        android:defaultValue="Jennifer" />
+    <CheckBoxPreference
+        android:key="@string/prefer_offline_recognition"
+        android:title="Prefer offline voice recognition"
+        android:summaryOff="Using network assistance"
+        android:summaryOn="Using offline speech files"  />
+    <EditTextPreference
         android:key="@string/connect_message"
         android:title="Message to hubby when leaving office"
         android:defaultValue="Leaving office right now. What's ur status?" />

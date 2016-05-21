@@ -2,8 +2,7 @@
 <all xmlns:android="http://schemas.android.com/apk/res/android">
     <group name="just_play">
         <action name="VOCI_ACTION_PLAY"></action>
-        <match>This is content (.*)</match>
-        <match>This is nothing (.*) and (.*)</match>
+        <match>.*play.*back(.*)</match>
     </group>
     <group name="play_rejected_request">
         <action name="VOCI_REPEAT_REJECTED_REQUEST"></action>
@@ -36,11 +35,15 @@
     </group>
     <group name="end_session">
         <action name="VOCI_END_SESSION"></action>
-        <match>.*thank.*Susan</match>
-        <match>.*that.*be.*all.*Susan</match>
-        <match>.*susan.*that.*be.*all.*</match>
+        <match>.*thank.*#user</match>
+        <match>.*that.*be.*all.*#user</match>
+        <match>.*#user.*that.*be.*all.*</match>
         <match>.*switch.*radio.*</match>
         <match>.*never.*mind</match>
+    </group>
+    <group name="hold_session">
+        <action name="VOCI_KEEP_LISTENING"></action>
+        <match>.*hold.*line.*</match>
     </group>
 
 

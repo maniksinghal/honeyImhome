@@ -59,10 +59,13 @@ public class MessageSpeaker implements
                  */
                 waiting_for_sco = false;
 
+                /*
                 if (scoMgr != null) {
                     context.unregisterReceiver(scoMgr);
                     scoMgr = null;
                 }
+                */
+                stopSCO();
 
                 ready = true;
                 jarvis.processIntent();
@@ -155,8 +158,12 @@ public class MessageSpeaker implements
                                 timer = null;
                             }
 
+                            /*
                             context.unregisterReceiver(this);
                             scoMgr = null;
+                            */
+                            stopSCO();
+
                             ready = true;
 
                             jarvis.processIntent();
@@ -169,11 +176,13 @@ public class MessageSpeaker implements
                             am.startBluetoothSco();
                         } else {
                             // We were already connected and now SCO got switched off
+                            stopSCO();
+                            /*
                             if (scoMgr != null) {
                                 am.setMode(AudioManager.MODE_NORMAL);
                                 am.setSpeakerphoneOn(true);
                                 scoMgr = null;
-                            }
+                            }*/
                         }
                         break;
 
@@ -210,11 +219,13 @@ public class MessageSpeaker implements
         if (tts_errored) {
             if (!waiting_for_sco) {
 
-                if (scoMgr != null) {
+
+                /*if (scoMgr != null) {
                     // TTS errored while sco initialized.
                     context.unregisterReceiver(scoMgr);
                     scoMgr = null;
-                }
+                }*/
+                stopSCO();
 
                 jarvis.cleanupIntent();
             }
@@ -265,19 +276,36 @@ public class MessageSpeaker implements
         }
     }
 
+    private void stopSCO() {
+        if (scoMgr != null) {
+            Log.d("this", "Stopping SCO and cleaning up its context");
+
+            /*
+            * stopBluetoothSCO call below triggers a synchronous
+            * AUDIO_STATE_UPDATED event, so release scoMgr before
+            * stopping sco
+             */
+
+            waiting_for_sco = false;
+            context.unregisterReceiver(scoMgr);
+            boolean conn_attempt_started = scoMgr.connection_attempt_started;
+            scoMgr = null;
+
+            AudioManager am = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+            if (conn_attempt_started && am.isBluetoothScoOn()) {
+                am.stopBluetoothSco();
+            }
+            am.setMode(AudioManager.MODE_NORMAL);
+            am.setSpeakerphoneOn(true);
+        }
+    }
 
     public void shutdown() {
         if (ready) {
             tts.shutdown();
             tts = null;
 
-            if (scoMgr != null) {
-                AudioManager am = (AudioManager)context.getSystemService(Context.AUDIO_SERVICE);
-                am.stopBluetoothSco();
-                am.setMode(AudioManager.MODE_NORMAL);
-                am.setSpeakerphoneOn(true);
-                scoMgr = null;
-            }
+            stopSCO();
 
             ready = false;
         }

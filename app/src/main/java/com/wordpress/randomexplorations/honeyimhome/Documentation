@@ -21,3 +21,9 @@ This active running intent was originally, the externally received interrupt whi
 When the voice recognition results are received from the MainActivity, then Jarvis deliberately enqueues the recognition results followed by the originally running intent (EXTRA_PURPOSE_CONVERSATION_RUNNING) in the workList.
 This triggers fetching and processing voice recognition results in the event loop.
 The function handle_voice_commands processes the results and within it (eventually) triggers the cleanup of the intent so that the next time, the EXTRA_PURPOSE_CONVERSATION_RUNNING intent is picked up for further listening to the user.
+
+first_conv flag:
+================
+Some events which are not triggered by the user (like connecting to car, recieving message from hubby) trigger automatic voice input from the user. User may not be interested in speaking to us, and may in fact be busy talking to someone else. It starts giving a very unpleasant experience if the software tries to interpret user's voice and (probably starts interrupting user's conversation) complaining that its not understanding what user is saying. Moreover, the radio is also blocked by SCO for this entire time.
+ Therefore the first_conv flag is set for such cases where user did not initiate the voice recognition. If software could not understand what the user said, and the speech does not contain the configured voice-assistant name, then the software assumes that user was not talking to it. Software updates the retry count and tries to listen again silently for max-retries without complaining.
+ Once it detects a valid voice commmand from the user, the flag is turned OFF assuming that it has user's attention and now it has the liberty to complain if it didn't understand subsequent commands from the user during that conversation session.

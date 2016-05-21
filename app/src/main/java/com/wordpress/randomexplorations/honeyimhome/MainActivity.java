@@ -21,14 +21,50 @@ import android.speech.RecognizerIntent;
 import java.util.ArrayList;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.util.Timer;
+import java.util.TimerTask;
+
 import android.text.method.ScrollingMovementMethod;
 
 
 public class MainActivity extends ActionBarActivity {
 
     private static final int VOICE_RECOGNITION_REQUEST = 0x0101;
+
     private SpeechRecognizer sr;
+    private boolean offline_mode = false;
     private MyRecognitionListener myRecognitionListener;
+
+    private Intent resultIntent = null;
+
+    private Timer speechServiceTimer = null;
+    private speechServiceTask speechTask = null;
+
+
+    public class speechServiceTask extends TimerTask {
+
+        private Context ctx;
+
+        public speechServiceTask(Context cont) {
+            ctx = cont;
+        }
+
+        public void run() {
+
+            /*
+            * Timer expired while waiting for speech-recognition service
+            * Treat it as - user didn't speak for now
+            */
+            Log.d("this", "speechService Timer expired. Cleaning up...");
+            resultIntent = new Intent(ctx, Jarvis.class);
+            resultIntent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_VOICE_RECOGNITION_RESULT);
+            resultIntent.putExtra(MyReceiver.EXTRA_VALUE, (String)null);
+            //MyReceiver.startWakefulService(ctx, resultIntent);
+            finish();
+
+
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,7 +85,9 @@ public class MainActivity extends ActionBarActivity {
             /*
             * Jarvis (re)launched MainActivity to launch voice recognition
             */
+            Log.d("this", "MainActivity invoked for speech recognition");
             sr = SpeechRecognizer.createSpeechRecognizer(this);
+            offline_mode = intent.getBooleanExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, false);
             start_speech_recognition();
         }
     }
@@ -58,6 +96,26 @@ public class MainActivity extends ActionBarActivity {
     protected void onStart() {
         super.onStart();
     }
+
+    @Override
+    protected void onDestroy() {
+
+        if (sr != null) {
+            Log.d("this", "Stopping listening");
+            sr.stopListening();
+            sr.destroy();
+
+
+            // Respond back to jarvis after killing the speech recognizer,
+            // Else, it looks like Jarvis executes a re-try before we cleanup and the next instance
+            // of MyActivity finds recognizer busy
+            MyReceiver.startWakefulService(this, resultIntent);
+        }
+
+        super.onDestroy();
+    }
+
+
 
 
     private class MyRecognitionListener implements RecognitionListener {
@@ -68,25 +126,41 @@ public class MainActivity extends ActionBarActivity {
         }
 
         public void onBeginningOfSpeech() {
+
             Log.d("this", "onBeginningOfSpeech");
+            restart_speech_recognition_timer(ctx);
         }
 
         public void onBufferReceived(byte[] buffer) {
+
             Log.d("this", "onBufferReceived");
         }
 
         public void onEndOfSpeech() {
+
             Log.d("this", "onEndOfSpeech");
+            restart_speech_recognition_timer(ctx);
         }
 
         public void onError(int error) {
-            Log.d("this", "onError: " + String.valueOf(error));
-            Intent intent = new Intent(ctx, Jarvis.class);
-            intent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_VOICE_RECOGNITION_RESULT);
-            intent.putExtra(MyReceiver.EXTRA_VALUE, (String)null);
-            MyReceiver.startWakefulService(ctx, intent);
-            sr.destroy();
-            finish();
+
+              /*
+            * We have seen getting multiple events (onError after onResult)
+            * Make sure we process them and poke Jarvis only once
+            * User speechServiceTimer object as a check for it
+             */
+            if (speechServiceTimer != null) {
+                Log.d("this", "onError: " + String.valueOf(error));
+                speechServiceTimer.cancel();
+                speechServiceTimer = null;
+                resultIntent = new Intent(ctx, Jarvis.class);
+                resultIntent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_VOICE_RECOGNITION_RESULT);
+                resultIntent.putExtra(MyReceiver.EXTRA_VALUE, (String) null);
+                //MyReceiver.startWakefulService(ctx, resultIntent);
+                finish();
+            } else {
+                Log.d("this", "Ignoring onError: " + String.valueOf(error));
+            }
 
         }
 
@@ -99,19 +173,35 @@ public class MainActivity extends ActionBarActivity {
         }
 
         public void onReadyForSpeech(Bundle params) {
+
             Log.d("this", "onReadyForSpeech");
+            restart_speech_recognition_timer(ctx);
         }
 
         public void onResults(Bundle results) {
             Log.d("this", "onResults");
-            ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-            String firstMatch = matches.get(0);
-            Intent intent = new Intent(ctx, Jarvis.class);
-            intent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_VOICE_RECOGNITION_RESULT);
-            intent.putExtra(MyReceiver.EXTRA_VALUE, firstMatch);
-            MyReceiver.startWakefulService(ctx, intent);
-            sr.destroy();
-            finish();
+
+            /*
+            * We have seen getting multiple events (onError after onResult)
+            * Make sure we process them and poke Jarvis only once
+            * User speechServiceTimer object as a check for it
+             */
+            if (speechServiceTimer != null) {
+
+                Log.d("this", "Processing onResults...");
+                speechServiceTimer.cancel();
+                speechServiceTimer = null;
+                ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+                String firstMatch = matches.get(0);
+                resultIntent = new Intent(ctx, Jarvis.class);
+                resultIntent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_VOICE_RECOGNITION_RESULT);
+                resultIntent.putExtra(MyReceiver.EXTRA_VALUE, firstMatch);
+                finish();
+
+            } else {
+                Log.d("this", "Ignoring onResults...");
+            }
+
 
         }
 
@@ -119,16 +209,41 @@ public class MainActivity extends ActionBarActivity {
             //Log.d("this", "onRmsChanged");
         }
     }
+
+    private void restart_speech_recognition_timer(Context ctx) {
+
+        if (speechServiceTimer != null) {
+            speechServiceTimer.cancel();
+            Log.d("this", "Re-starting speechRecognition timer...");
+
+        } else {
+            Log.d("this", "Starting speechRecognition timer...");
+        }
+
+        speechServiceTimer = new Timer();
+        speechTask = new speechServiceTask(ctx);
+        speechServiceTimer.schedule(speechTask, 5000);  // 5 second timer
+    }
+
     private void start_speech_recognition() {
 
 
+        Log.d("this", "Starting speech recognition in Main activity");
         sr.setRecognitionListener(myRecognitionListener);
+
+        /*
+        * Speech recognition sometimes just hangs without listening
+        * Start timer for recovery
+        */
+        restart_speech_recognition_timer(this);
+
 
 
         Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
                 RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
         intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 2000);
+        intent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, offline_mode);
         //intent.putExtra(RecognizerIntent.EXTRA_PROMPT,
           //      "Please speak slowly and enunciate clearly.");
         sr.startListening(intent);

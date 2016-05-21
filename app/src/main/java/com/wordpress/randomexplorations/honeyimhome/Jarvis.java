@@ -45,7 +45,15 @@ public class Jarvis extends IntentService {
     * voice conversation.
      */
     public static final int MAX_RECOGNITION_RETRY = 3;
+    public static final int INFINITE_RECOGNITION_RETRY = 255; // Wait for user to decide what to speak
     private int recognition_retry = MAX_RECOGNITION_RETRY;
+
+    /*
+    * Is Jarvis speaking for the first time?
+    * For first-conv case, user may not even be speaking to us, don't blindly start complaining
+    * if you don't know whether he is even talking to you.
+     */
+    private boolean first_conv = false;
 
     private Timer wifi_timer = null;
 
@@ -621,6 +629,7 @@ public class Jarvis extends IntentService {
         // Change it to CONV_RUNNING to trigger listening to voice command from user.
         runningIntent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_CONVERSATION_RUNNING);
         recognition_retry = MAX_RECOGNITION_RETRY;
+        first_conv = true;
         workList.add(insert_location, runningIntent);  // re-queue after above intents.
         runningIntent = null;  // so that it does not get wake-lock-released by cleanupIntent
         cleanupIntent();  // Cleanup current 'connect-to-car' intent and pick up first child-intent
@@ -698,6 +707,9 @@ public class Jarvis extends IntentService {
     private void start_voice_recognition() {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         Boolean use_sco = prefs.getBoolean(getString(R.string.bluetooth_sco), false);
+        Boolean prefer_offline = prefs.getBoolean(getString(R.string.prefer_offline_recognition), false);
+
+        Log.d("this", "Prefer offline recognition: " + prefer_offline);
 
         /*
         * If voice recognition starts, then sometimes it picks up garbage
@@ -706,7 +718,7 @@ public class Jarvis extends IntentService {
         * This would give a better experience to the user by muting the stereo music and
         * also allowing listening from the stereo, than the phone.
          */
-        if (use_sco && !speaker.ready) {
+        if (use_sco && connected_to_car && !speaker.ready) {
             Log.d("this", "Starting voice recognition after switching ON SCO\n");
             /* Speaker shall call us back and lead to re-processing of CONV_RUNNING intent.
              * This would lead to decrementing recognition-retry count, so compensate for it here */
@@ -717,6 +729,7 @@ public class Jarvis extends IntentService {
 
         Intent intent = new Intent(this, MainActivity.class);
         intent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_START_VOICE_RECOGNITION);
+        intent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, prefer_offline);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(intent);
     }
@@ -731,9 +744,17 @@ public class Jarvis extends IntentService {
      */
     private void handle_voice_command(String message)
     {
-        VoCI voci = new VoCI(this);
-        String action = voci.execute(message);
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        String service_name = prefs.getString(getString(R.string.voice_assistant), "jennifer");
+        VoCI voci = null;
+        String action = null;
+
+        // Flatten all cases
+        message = message.toLowerCase();
+        service_name =service_name.toLowerCase();
+
+        voci = new VoCI(this, service_name);
+        action = voci.execute(message);
 
         Log.d("this", "Recognized following message: " + message);
 
@@ -742,7 +763,7 @@ public class Jarvis extends IntentService {
         * We may not be able to decode the message, but we leave it to the user
         * to try as much as he/she wants.
          */
-        recognition_retry = MAX_RECOGNITION_RETRY;
+
 
 
         if (action.equals(VoCI.VOCI_ACTION_INVALID)) {
@@ -753,15 +774,34 @@ public class Jarvis extends IntentService {
             editor.putString(getString(R.string.repeat_rejected_request), message);
             editor.commit();
 
-            // Change intent-purpose to play-message
-            String retry_msg = "I Don't know how to handle the request";
-            runningIntent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_MESSAGE_TO_PLAY);
-            runningIntent.putExtra(MyReceiver.EXTRA_VALUE, retry_msg);
-            runningIntent.putExtra(MyReceiver.EXTRA_STORE_MSG, false);
-            play_message(retry_msg, false);  // This will play message and pick up CONV_RUNNING intent
+            Log.d("this", "Not matching our list. first_conv:" + first_conv +
+              ", contains assistant-name " + service_name + ": " + message.contains(service_name));
 
-            Log.d("this", "Could not interpret action from message");
+            // Complain only during middle of conversations or if we are sure that user was
+            // speaking to us
+            if (!first_conv || message.contains(service_name)) {
+
+                // We have user's attention
+                first_conv = false;
+                recognition_retry = MAX_RECOGNITION_RETRY;  // leave it to user to decide how long he wants to retry
+
+                // Change intent-purpose to play-message
+                String retry_msg = "I Don't know how to handle the request";
+                runningIntent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_MESSAGE_TO_PLAY);
+                runningIntent.putExtra(MyReceiver.EXTRA_VALUE, retry_msg);
+                runningIntent.putExtra(MyReceiver.EXTRA_STORE_MSG, false);
+                play_message(retry_msg, false);  // This will play message and pick up CONV_RUNNING intent
+            } else {
+                cleanupIntent();  // retry by picking up CONV_RUNNING intent again from the queue
+            }
+
+            //Log.d("this", "Could not interpret action from message");
             return;
+        } else {
+            // We were able to interpret what user said
+            // Assume, now we are in middle of conversation and we have user's attention
+            first_conv = false;
+            recognition_retry = MAX_RECOGNITION_RETRY;
         }
 
 
@@ -827,6 +867,27 @@ public class Jarvis extends IntentService {
             Log.d("this", "action: End session");
             recognition_retry = 0;  // No more retries for voice recognition
             cleanupIntent();  // Cleanup this intent and pick CONV_RUNNING intent which should also clean-up
+
+        } else if (action.equals(VoCI.VOCI_KEEP_LISTENING)) {
+            // User wants a minute to decide what to instruct
+            // Bump-up the recognize-retry count to keep retrying listening for the user.
+            Log.d("this", "action: Keep listening");
+            recognition_retry = INFINITE_RECOGNITION_RETRY;
+            cleanupIntent();
+
+        } else if (action.equals(VoCI.VOCI_ACTION_PLAY)) {
+
+            // Playback the decoded message
+            if (!voci.arg1.isEmpty()) {
+                message = "Playing back " + voci.arg1;
+            } else {
+                message = "Could not get the message you want to play back";
+            }
+
+            runningIntent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_MESSAGE_TO_PLAY);
+            runningIntent.putExtra(MyReceiver.EXTRA_VALUE, message);
+            play_message(message, true); //store as last played message as well
+
 
         } else {
             // Default case
@@ -914,6 +975,7 @@ public class Jarvis extends IntentService {
                 i.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_MESSAGE_TO_PLAY);
                 i.putExtra(MyReceiver.EXTRA_VALUE, message);
 
+                first_conv = true;
                 runningIntent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_CONVERSATION_RUNNING);
                 recognition_retry = MAX_RECOGNITION_RETRY;
                 workList.add(runningIntent);
@@ -950,6 +1012,7 @@ public class Jarvis extends IntentService {
              */
             case MyReceiver.EXTRA_PURPOSE_START_VOICE_RECOGNITION:
                 Log.d("this", "Starting voice recognition as per UI command...");
+                first_conv = false;  // User-initiated recognition, user is going to speak to us
                 runningIntent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_CONVERSATION_RUNNING);
                 recognition_retry = MAX_RECOGNITION_RETRY;
                 start_voice_recognition();

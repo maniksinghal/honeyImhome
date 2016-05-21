@@ -26,6 +26,8 @@
     <string name="repeat_sent_message">repeat_sent_message</string>
     <string name="repeat_rejected_request">repeat_rejected_request</string>
     <string name="office_loc">Office location</string>
+    <string name="voice_assistant">voice_assistant</string>
+    <string name="prefer_offline_recognition">prefer_offline_recognition</string>
     <string name="home_loc">Home location</string>
     <string name="week_start_reminder">week_start_reminder</string>
     <string name="week_end_reminder">week_end_reminder</string>
