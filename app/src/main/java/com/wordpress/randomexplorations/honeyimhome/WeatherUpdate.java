@@ -21,11 +21,19 @@ public class WeatherUpdate extends AsyncTask<URL, Void, Void> {
     private String description = null;
     private String temperature = null;
     Jarvis jarvis = null;
+    MainActivity main = null;
     private String weather_id = null;
+    private boolean called_from_jarvis = true;
 
     public WeatherUpdate(Jarvis jvs, String woeid) {
         jarvis = jvs;
         weather_id = woeid;
+    }
+
+    public WeatherUpdate(MainActivity ctx, String woeid) {
+        called_from_jarvis = false;
+        weather_id = woeid;
+        main = ctx;
     }
 
     /*
@@ -113,17 +121,26 @@ public class WeatherUpdate extends AsyncTask<URL, Void, Void> {
     protected void onPostExecute(Void result) {
 
         String message = null;
+        String display = null;
         if (description != null) {
             // We were able to fetch weather
             message = "Weather today is " + description + " with temperature " + temperature
                     + " degree celcius";
+            display = description + " (" + temperature + "\u00B0C)";
         } else {
             message = "Could not contact weather service";
+            display = "Weather: <Network Error>";
         }
 
-        List<String> list = new ArrayList();
-        list.add(MyReceiver.EXTRA_IS_WEATHER_UPDATE);
-        jarvis.processIntent(message, list);
+        if (called_from_jarvis) {
+            List<String> list = new ArrayList();
+            list.add(MyReceiver.EXTRA_IS_WEATHER_UPDATE);
+            jarvis.processIntent(message, list);
+        } else {
+            // Called from Main activity
+            main.updateWeather(display);
+        }
+
 
         return;
     }

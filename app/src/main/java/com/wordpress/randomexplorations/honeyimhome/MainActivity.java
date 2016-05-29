@@ -4,6 +4,7 @@ import android.app.IntentService;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.media.AudioManager;
 import android.os.Build;
 import android.preference.PreferenceManager;
@@ -14,7 +15,9 @@ import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
+import android.view.View;
 import android.view.MenuItem;
+import android.widget.Button;
 import android.widget.TextView;
 import android.speech.RecognizerIntent;
 
@@ -29,8 +32,6 @@ import android.text.method.ScrollingMovementMethod;
 
 public class MainActivity extends ActionBarActivity {
 
-    private static final int VOICE_RECOGNITION_REQUEST = 0x0101;
-
     private SpeechRecognizer sr;
     private boolean offline_mode = false;
     private MyRecognitionListener myRecognitionListener;
@@ -39,6 +40,17 @@ public class MainActivity extends ActionBarActivity {
 
     private Timer speechServiceTimer = null;
     private speechServiceTask speechTask = null;
+
+    private void handleRequestFromJarvis(Intent intent) {
+        int value = intent.getIntExtra(MyReceiver.EXTRA_PURPOSE, -1);
+
+        if (value == MyReceiver.EXTRA_PURPOSE_START_VOICE_RECOGNITION) {
+            Log.d("this", "MainActivity invoked for speech recognition");
+            sr = SpeechRecognizer.createSpeechRecognizer(this);
+            offline_mode = intent.getBooleanExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, false);
+            start_speech_recognition();
+        }
+    }
 
 
     public class speechServiceTask extends TimerTask {
@@ -66,35 +78,95 @@ public class MainActivity extends ActionBarActivity {
         }
     }
 
+
+    private void startWeatherUpdate() {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        String woeid = prefs.getString(getString(R.string.weather_woeid), "0");
+        String weather = prefs.getString(getString(R.string.current_weather), "Not available");
+
+        TextView weatherView = (TextView)findViewById(R.id.weatherView);
+        weatherView.setText(weather);
+        weatherView.setTextColor(Color.parseColor("#808080"));
+        new WeatherUpdate(this, woeid).execute(null, null, null);
+    }
+
+    public void updateWeather(String description) {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        SharedPreferences.Editor editor = prefs.edit();
+
+        editor.putString(getString(R.string.current_weather), description);
+        editor.commit();
+
+        TextView weatherView = (TextView)findViewById(R.id.weatherView);
+        weatherView.setTextColor(Color.parseColor("#ffffff"));
+        weatherView.setText(description);
+    }
+
+    protected void onNewIntent (Intent intent) {
+        Log.d("this", "Received new intent");
+
+        int value = intent.getIntExtra(MyReceiver.EXTRA_PURPOSE, -1);
+        if (value != -1) {
+            handleRequestFromJarvis(intent);
+        }
+
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
+
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.app_layout);
 
         myRecognitionListener = new MyRecognitionListener(this);
 
         TextView tv = (TextView)findViewById(R.id.hello_world);
         tv.setMovementMethod(new ScrollingMovementMethod());
-        tv.setText("Hit Settings to make changes");
+
+        TextView weatherView = (TextView)findViewById(R.id.weatherView);
+        weatherView.setOnClickListener(new View.OnClickListener() {
+
+            public void onClick(View view) {
+                startWeatherUpdate();
+            }
+
+        });
+
+        Button bt = (Button)findViewById(R.id.GoButton);
+        bt.setEnabled(true);
+        bt.setOnClickListener(new Button.OnClickListener() {
+
+            public void onClick(View bt) {
+                command_speech_recognition();
+            }
+        });
+
+        startWeatherUpdate();
 
         Intent intent = getIntent();
         int value = intent.getIntExtra(MyReceiver.EXTRA_PURPOSE, -1);
-        tv.setText("Activity started with value: " + String.valueOf(value));
 
-        if (value == MyReceiver.EXTRA_PURPOSE_START_VOICE_RECOGNITION) {
-            /*
-            * Jarvis (re)launched MainActivity to launch voice recognition
-            */
-            Log.d("this", "MainActivity invoked for speech recognition");
-            sr = SpeechRecognizer.createSpeechRecognizer(this);
-            offline_mode = intent.getBooleanExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, false);
-            start_speech_recognition();
+        if (value != -1) {
+            handleRequestFromJarvis(intent);
         }
     }
 
     @Override
     protected void onStart() {
         super.onStart();
+    }
+
+    private void stopListening() {
+        Button bt = (Button)findViewById(R.id.GoButton);
+
+        if (sr != null) {
+            sr.stopListening();
+            sr.destroy();
+            sr = null;
+        }
+
+        bt.setEnabled(true);
     }
 
     @Override
@@ -104,12 +176,6 @@ public class MainActivity extends ActionBarActivity {
             Log.d("this", "Stopping listening");
             sr.stopListening();
             sr.destroy();
-
-
-            // Respond back to jarvis after killing the speech recognizer,
-            // Else, it looks like Jarvis executes a re-try before we cleanup and the next instance
-            // of MyActivity finds recognizer busy
-            MyReceiver.startWakefulService(this, resultIntent);
         }
 
         super.onDestroy();
@@ -156,8 +222,9 @@ public class MainActivity extends ActionBarActivity {
                 resultIntent = new Intent(ctx, Jarvis.class);
                 resultIntent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_VOICE_RECOGNITION_RESULT);
                 resultIntent.putExtra(MyReceiver.EXTRA_VALUE, (String) null);
-                //MyReceiver.startWakefulService(ctx, resultIntent);
-                finish();
+                stopListening();
+                MyReceiver.startWakefulService(ctx, resultIntent);
+                //finish();
             } else {
                 Log.d("this", "Ignoring onError: " + String.valueOf(error));
             }
@@ -196,7 +263,9 @@ public class MainActivity extends ActionBarActivity {
                 resultIntent = new Intent(ctx, Jarvis.class);
                 resultIntent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_VOICE_RECOGNITION_RESULT);
                 resultIntent.putExtra(MyReceiver.EXTRA_VALUE, firstMatch);
-                finish();
+                stopListening();
+                MyReceiver.startWakefulService(ctx, resultIntent);
+                //finish();
 
             } else {
                 Log.d("this", "Ignoring onResults...");
@@ -226,7 +295,9 @@ public class MainActivity extends ActionBarActivity {
     }
 
     private void start_speech_recognition() {
+        Button bt = (Button)findViewById(R.id.GoButton);
 
+        bt.setEnabled(false);
 
         Log.d("this", "Starting speech recognition in Main activity");
         sr.setRecognitionListener(myRecognitionListener);
@@ -247,7 +318,6 @@ public class MainActivity extends ActionBarActivity {
         //intent.putExtra(RecognizerIntent.EXTRA_PROMPT,
           //      "Please speak slowly and enunciate clearly.");
         sr.startListening(intent);
-        //startActivityForResult(intent, VOICE_RECOGNITION_REQUEST);
 
     }
 
@@ -292,41 +362,6 @@ public class MainActivity extends ActionBarActivity {
 
         TextView tv = (TextView)findViewById(R.id.hello_world);
         tv.setText(message);
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        String firstMatch = null;
-        if (requestCode == VOICE_RECOGNITION_REQUEST) {
-            if (resultCode == RESULT_OK) {
-                ArrayList<String> matches = data
-                        .getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
-                firstMatch = matches.get(0);
-            }
-
-            Intent intent = new Intent(this, Jarvis.class);
-            intent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_VOICE_RECOGNITION_RESULT);
-            intent.putExtra(MyReceiver.EXTRA_VALUE, firstMatch);
-            MyReceiver.startWakefulService(this, intent);
-            finish();
-
-            /* Run the match through VoCI
-            VoCI voci = new VoCI(this);
-            String action = voci.execute(firstMatch);
-
-            firstMatch += "\nAction=" + action;
-            firstMatch += "\nGroup_count=" + String.valueOf(voci.groupCount);
-            if (voci.groupCount >= 1) {
-                firstMatch += "\narg1=" + voci.arg1;
-            }
-            if (voci.groupCount >= 2) {
-                firstMatch += "\narg2=" + voci.arg2;
-            }
-
-            TextView tv = (TextView)findViewById(R.id.hello_world);
-            tv.setText(firstMatch);
-            */
-        }
     }
 
     private void get_parameters() {
@@ -476,11 +511,7 @@ public class MainActivity extends ActionBarActivity {
         } else if (id == R.id.action_get_bills) {
             get_bill_payments();
         } else if (id == R.id.action_start_SR) {
-            //start_speech_recognition();
-            Intent i = new Intent(this, Jarvis.class);
-            i.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_START_VOICE_RECOGNITION);
-            //i.putExtra(MyReceiver.EXTRA_FORCE_PLAY, true);
-            MyReceiver.startWakefulService(this, i);
+            command_speech_recognition();
         } else if (id == R.id.clear_logging) {
             clear_logging();
         } else if (id == R.id.show_logging) {
@@ -489,5 +520,15 @@ public class MainActivity extends ActionBarActivity {
 
 
         return super.onOptionsItemSelected(item);
+    }
+
+    private void command_speech_recognition() {
+        Button bt = (Button)findViewById(R.id.GoButton);
+        Intent i = new Intent(this, Jarvis.class);
+
+        bt.setEnabled(false);
+
+        i.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_START_VOICE_RECOGNITION);
+        MyReceiver.startWakefulService(this, i);
     }
 }
