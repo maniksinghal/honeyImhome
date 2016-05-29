@@ -9,6 +9,7 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
+import android.os.BatteryManager;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.provider.Telephony;
@@ -56,6 +57,7 @@ public class MyReceiver extends WakefulBroadcastReceiver {
     // Used by internally generated messages.
     public static final String EXTRA_FORCE_PLAY = "com.wordpress.randomexplorations.honeyimhome.force_play";
 
+
     public static final int EXTRA_PURPOSE_INVALID = 0;
     public static final int EXTRA_PURPOSE_MESSAGE_TO_PLAY = 1;
     public static final int EXTRA_PURPOSE_CAR_CONNECT = 2;
@@ -69,6 +71,8 @@ public class MyReceiver extends WakefulBroadcastReceiver {
     public static final int EXTRA_PURPOSE_VOICE_RECOGNITION_RESULT = 10;
     public static final int EXTRA_PURPOSE_SMS_RECEIVED = 11;
     public static final int EXTRA_PURPOSE_CONVERSATION_RUNNING = 12;
+    public static final int EXTRA_PURPOSE_POWER_STATE_CHANGED = 13;
+    public static final int EXTRA_PURPOSE_SYNC_MAIN_ACTIVITY = 14;
 
     public static final String AM_IN_CAR = "com.wordpress.randomexplorations.honeyimhome.am_in_car";
 
@@ -82,6 +86,8 @@ public class MyReceiver extends WakefulBroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
 
         thisContext = context;
+        boolean power_state_changed = false;
+        boolean power_state = false;
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         String action = intent.getAction();
 
@@ -102,7 +108,20 @@ public class MyReceiver extends WakefulBroadcastReceiver {
             } else if (netInfo != null && netInfo.getState() == NetworkInfo.State.DISCONNECTED) {
                 handle_wifi_actions(context, false, prefs, null);
             }
+        } else if (Intent.ACTION_POWER_CONNECTED.equals(action)) {
+            handle_power_state_change(context, true);
+        } else if (Intent.ACTION_POWER_DISCONNECTED.equals(action)) {
+            handle_power_state_change(context, false);
         }
+
+    }
+
+    private void handle_power_state_change(Context context, boolean power_state) {
+        Intent i = new Intent(context, Jarvis.class);
+        i.putExtra(EXTRA_PURPOSE, EXTRA_PURPOSE_POWER_STATE_CHANGED);
+        i.putExtra(EXTRA_VALUE, power_state);
+        Log.d("this", "Broadcast received for battery charging state change: " + power_state);
+        startWakefulService(context, i);
     }
 
     private void handle_wifi_actions(Context context, boolean connected, SharedPreferences prefs,

@@ -11,13 +11,17 @@ import android.preference.PreferenceManager;
 import android.speech.RecognitionListener;
 import android.speech.SpeechRecognizer;
 import android.speech.tts.TextToSpeech;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
+import android.support.v7.widget.LinearLayoutCompat;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
 import android.view.MenuItem;
+import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.speech.RecognizerIntent;
 
@@ -41,6 +45,36 @@ public class MainActivity extends ActionBarActivity {
     private Timer speechServiceTimer = null;
     private speechServiceTask speechTask = null;
 
+    // Variables to sync with Jarvis
+    private boolean connected_to_car = false;
+    private boolean is_phone_charging = false;
+    private String user_notification = null;
+
+    private void start_self_sync() {
+        LinearLayout li = (LinearLayout)findViewById(R.id.main_layout);
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        String layout_color = null;
+
+        connected_to_car = prefs.getBoolean(MyReceiver.AM_IN_CAR, false);
+        is_phone_charging = prefs.getBoolean(getString(R.string.battery_charging_state), false);
+        user_notification = prefs.getString(getString(R.string.user_notification), null);
+
+        if (connected_to_car) {
+            // Activate the background color
+            layout_color = getString(R.string.color_connected);
+        } else {
+            layout_color = getString(R.string.color_disconnected);
+        }
+        li.setBackgroundColor(Color.parseColor(layout_color));
+
+        if (is_phone_charging && connected_to_car) {
+            // Keep screen always ON
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        } else {
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        }
+    }
+
     private void handleRequestFromJarvis(Intent intent) {
         int value = intent.getIntExtra(MyReceiver.EXTRA_PURPOSE, -1);
 
@@ -49,6 +83,8 @@ public class MainActivity extends ActionBarActivity {
             sr = SpeechRecognizer.createSpeechRecognizer(this);
             offline_mode = intent.getBooleanExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, false);
             start_speech_recognition();
+        } else if (value == MyReceiver.EXTRA_PURPOSE_SYNC_MAIN_ACTIVITY) {
+            start_self_sync();
         }
     }
 
@@ -71,8 +107,9 @@ public class MainActivity extends ActionBarActivity {
             resultIntent = new Intent(ctx, Jarvis.class);
             resultIntent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_VOICE_RECOGNITION_RESULT);
             resultIntent.putExtra(MyReceiver.EXTRA_VALUE, (String)null);
-            //MyReceiver.startWakefulService(ctx, resultIntent);
-            finish();
+            stopListening();
+            MyReceiver.startWakefulService(ctx, resultIntent);
+            //finish();
 
 
         }
@@ -149,6 +186,9 @@ public class MainActivity extends ActionBarActivity {
 
         if (value != -1) {
             handleRequestFromJarvis(intent);
+        } else {
+            // User triggered app start
+            start_self_sync();
         }
     }
 
@@ -403,7 +443,9 @@ public class MainActivity extends ActionBarActivity {
         message += getString(R.string.repeat_rejected_request) + ": " + prefs.getString(getString(R.string.repeat_rejected_request), "<Not found>") + "\n";
         message += getString(R.string.repeat_sent_message) + ": " + prefs.getString(getString(R.string.repeat_sent_message), "<Not found>") + "\n";
         message += getString(R.string.repeat_last_message) + ": " + prefs.getString(getString(R.string.repeat_last_message), "<Not found>") + "\n";
-        message += MyReceiver.AM_IN_CAR + ": " + prefs.getBoolean(MyReceiver.AM_IN_CAR, false) + "\n";
+        message += "Am I in car: "  + prefs.getBoolean(MyReceiver.AM_IN_CAR, false) + "\n";
+        message += "Is phone charging: " +
+                 prefs.getBoolean(getString(R.string.battery_charging_state), false) + "\n";
 
 
 

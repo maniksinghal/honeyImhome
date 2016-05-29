@@ -478,6 +478,7 @@ public class Jarvis extends IntentService {
         //restore_ringer_volume();
 
         connected_to_car = false;
+        sync_main_activity(true);
         cleanupIntent();
         return;
     }
@@ -544,6 +545,9 @@ public class Jarvis extends IntentService {
         // Bump up the volume to max
         int music_volume = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
         am.setStreamVolume(AudioManager.STREAM_MUSIC, music_volume, 0);
+
+        connected_to_car = true;
+        sync_main_activity(false);   //Update UI
 
         start_ride(prefs);
 
@@ -623,7 +627,6 @@ public class Jarvis extends IntentService {
             insert_location++;
         }
 
-        connected_to_car = true;
         // Keep the car-connected intent to hold the wakelock, so that the sub-intents can run
         // without any issue
         // Change it to CONV_RUNNING to trigger listening to voice command from user.
@@ -902,6 +905,40 @@ public class Jarvis extends IntentService {
         return;
     }
 
+    private void sync_main_activity(boolean disconnecting_from_car) {
+        SharedPreferences prefs =
+                PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+
+        if (!connected_to_car && !disconnecting_from_car) {
+              // No need, main-activity may not be spawned
+            Log.d("this", "Not notifying main activity as not connected to car");
+            return;
+        }
+
+        Log.d("this", "Starting sync with main activity");
+        Intent intent = new Intent(this, MainActivity.class);
+        intent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_SYNC_MAIN_ACTIVITY);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+        /* Main activity shall read shared-preferences to sync with Jarvis */
+        startActivity(intent);
+
+    }
+
+    private void handle_power_state_change(boolean power_state) {
+        SharedPreferences prefs =
+                PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        SharedPreferences.Editor edit = prefs.edit();
+
+        Log.d("this", "Battery charging state of phone changed to: " + power_state);
+
+        edit.putBoolean(getString(R.string.battery_charging_state), power_state);
+        edit.commit();
+
+        sync_main_activity(false);
+
+    }
+
     public void processIntent() {
 
         String message = null;
@@ -1035,6 +1072,13 @@ public class Jarvis extends IntentService {
                     handle_voice_command(msg);
                 }
                 break;
+
+            case MyReceiver.EXTRA_PURPOSE_POWER_STATE_CHANGED:
+                boolean power_state = runningIntent.getBooleanExtra(MyReceiver.EXTRA_VALUE, false);
+                handle_power_state_change(power_state);
+                cleanupIntent();
+                break;
+
 
             default:
                 cleanupIntent();

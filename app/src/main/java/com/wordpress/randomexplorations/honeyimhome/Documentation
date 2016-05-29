@@ -5,6 +5,11 @@ REQUIREMENTS for MainActivity:
 - User should be able to launch MainActivity himself, and activity should sync with Jarvis
   > MainActivity can get destroyed by other activities.
 
+- Items to sync between Main Activity and Jarvis
+  > Connection to Car
+  > Battery charging state
+  > Notification for user (ETA to home/office, etc)
+
 
 1. Voice commands interpretation
 ================================
