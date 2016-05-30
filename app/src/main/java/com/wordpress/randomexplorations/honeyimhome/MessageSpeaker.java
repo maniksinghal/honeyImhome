@@ -5,7 +5,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.media.AudioManager;
+import android.os.Bundle;
 import android.speech.tts.TextToSpeech;
+import android.speech.tts.UtteranceProgressListener;
 import android.util.Log;
 
 import java.util.HashMap;
@@ -16,13 +18,12 @@ import java.util.TimerTask;
 /**
  * Created by maniksin on 6/19/15.
  */
-public class MessageSpeaker implements
-        TextToSpeech.OnInitListener,TextToSpeech.OnUtteranceCompletedListener{
+public class MessageSpeaker extends UtteranceProgressListener implements
+        TextToSpeech.OnInitListener {
 
     // Technical parameters
     private TextToSpeech tts = null;
-    private String audio_stream = null;
-    private HashMap<String,String> myHashAlarm = null;
+    private Bundle tts_parameters = null;
     private BluetoothScoManager scoMgr = null;
 
     // Timers to wait for SCO
@@ -234,25 +235,12 @@ public class MessageSpeaker implements
 
         tts.setLanguage(Locale.ENGLISH);
 
-        myHashAlarm = new HashMap();
-        myHashAlarm.put(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID,
-                "end of wakeup message ID");
+        tts.setOnUtteranceProgressListener(this);
+        tts_parameters = new Bundle();
+        tts_parameters.putInt(TextToSpeech.Engine.KEY_PARAM_STREAM,
+                AudioManager.STREAM_MUSIC);
 
-        // Overriding stream to music always as it works fine both
-        // from phone (non-sco) and stereo (during sco)
-        audio_stream = String.valueOf(AudioManager.STREAM_MUSIC);
-
-        /*if (scoMgr != null) {
-            // SCO in action
-            audio_stream = String.valueOf(AudioManager.STREAM_VOICE_CALL);
-        } else {
-            audio_stream = String.valueOf(AudioManager.STREAM_MUSIC);
-        }*/
-
-        myHashAlarm.put(TextToSpeech.Engine.KEY_PARAM_STREAM,
-                audio_stream);
-
-        tts.setOnUtteranceCompletedListener(this);  // callback when speech is complete.
+        //tts.setOnUtteranceCompletedListener(this);  // callback when speech is complete.
         //tts.setSpeechRate((float) 0.7);
         //tts.setPitch((float)0.8);
 
@@ -269,11 +257,25 @@ public class MessageSpeaker implements
     public void speak(String message) {
         if (ready) {
             Log.d("this", "TTS: Speaking: " + message);
-            tts.speak(message, TextToSpeech.QUEUE_ADD, myHashAlarm);
+            tts.speak(message, TextToSpeech.QUEUE_ADD, tts_parameters, "MyUtteranceId");
         } else {
             Log.d("this", "MessageSpeaker: TTS not ready");
             jarvis.cleanupIntent();
         }
+    }
+
+    public void onStart(String utter_id) { }
+    public void onError(String utter_Id) {
+        Log.d("this", "Speech utterance Error");
+        onDone(utter_Id);
+    }
+    public void onError(String utter_id, int errorCode) {
+        Log.d("this", "Speech utterance ERROR: " + errorCode + "!!");
+        onDone(utter_id);
+    }
+    public void onDone(String utter_id) {
+        jarvis.update_last_greeting_time();
+        jarvis.cleanupIntent();
     }
 
     private void stopSCO() {
@@ -309,12 +311,6 @@ public class MessageSpeaker implements
 
             ready = false;
         }
-    }
-
-
-    public void onUtteranceCompleted(String uttId) {
-        jarvis.update_last_greeting_time();
-        jarvis.cleanupIntent();
     }
 
 

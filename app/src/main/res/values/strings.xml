@@ -45,6 +45,7 @@
     <!-- colors -->
     <string name="color_disconnected">#38004D</string>
     <string name="color_connected">#BF00E6</string>
+    <string name="color_ready_for_speech">#33CC00</string>
 
     <string name="ringer_volume">ringer volume</string>
     <string-array name="paired_devices">

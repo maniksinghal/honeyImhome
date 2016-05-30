@@ -7,6 +7,9 @@ import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.media.AudioManager;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.preference.PreferenceManager;
 import android.speech.RecognitionListener;
 import android.speech.SpeechRecognizer;
@@ -37,7 +40,6 @@ import android.text.method.ScrollingMovementMethod;
 public class MainActivity extends ActionBarActivity {
 
     private SpeechRecognizer sr;
-    private boolean offline_mode = false;
     private MyRecognitionListener myRecognitionListener;
 
     private Intent resultIntent = null;
@@ -45,13 +47,42 @@ public class MainActivity extends ActionBarActivity {
     private Timer speechServiceTimer = null;
     private speechServiceTask speechTask = null;
 
-    // Variables to sync with Jarvis
+    // State variables
     private boolean connected_to_car = false;
     private boolean is_phone_charging = false;
     private String user_notification = null;
+    private boolean is_listening = false;
+    private boolean is_ready_for_speech = false;
 
-    private void start_self_sync() {
+    //Communication between main UI thread and timer threads
+    private int speech_timer_seq_num = 0;
+    private Handler speech_timer_handler = new Handler(Looper.getMainLooper()) {
+      @Override
+        public void handleMessage (Message msg) {
+          if (msg.what == speech_timer_seq_num) {
+              // Message corresponding to current timer session
+              // Speech Timer has expired, return null-message to Jarvis
+              Log.d("this", "In main thread: Speech timer expiry received");
+              if (sr != null) {
+
+                  is_listening = false;
+                  is_ready_for_speech = false;
+                  update_ui();
+
+                  Log.d("this", "Stopping speech recognition");
+                  stopListening();
+                  resultIntent = new Intent((Context)msg.obj, Jarvis.class);
+                  resultIntent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_VOICE_RECOGNITION_RESULT);
+                  resultIntent.putExtra(MyReceiver.EXTRA_VALUE, (String)null);
+                  MyReceiver.startWakefulService((Context)msg.obj, resultIntent);
+              }
+          }
+      }
+    };
+
+    private void update_ui() {
         LinearLayout li = (LinearLayout)findViewById(R.id.main_layout);
+        Button bt = (Button)findViewById(R.id.GoButton);
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         String layout_color = null;
 
@@ -59,7 +90,9 @@ public class MainActivity extends ActionBarActivity {
         is_phone_charging = prefs.getBoolean(getString(R.string.battery_charging_state), false);
         user_notification = prefs.getString(getString(R.string.user_notification), null);
 
-        if (connected_to_car) {
+        if (is_ready_for_speech) {
+            layout_color = getString(R.string.color_ready_for_speech);
+        } else if (connected_to_car) {
             // Activate the background color
             layout_color = getString(R.string.color_connected);
         } else {
@@ -73,6 +106,12 @@ public class MainActivity extends ActionBarActivity {
         } else {
             getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         }
+
+        if (is_listening) {
+            bt.setEnabled(false);
+        } else {
+            bt.setEnabled(true);
+        }
     }
 
     private void handleRequestFromJarvis(Intent intent) {
@@ -80,21 +119,24 @@ public class MainActivity extends ActionBarActivity {
 
         if (value == MyReceiver.EXTRA_PURPOSE_START_VOICE_RECOGNITION) {
             Log.d("this", "MainActivity invoked for speech recognition");
-            sr = SpeechRecognizer.createSpeechRecognizer(this);
-            offline_mode = intent.getBooleanExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, false);
-            start_speech_recognition();
+            boolean offline_mode = intent.getBooleanExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, false);
+            start_speech_recognition(offline_mode);
         } else if (value == MyReceiver.EXTRA_PURPOSE_SYNC_MAIN_ACTIVITY) {
-            start_self_sync();
+            // Nothing special for now, except updating UI
         }
+
+        update_ui();
     }
 
 
     public class speechServiceTask extends TimerTask {
 
         private Context ctx;
+        private int seq_num;
 
-        public speechServiceTask(Context cont) {
+        public speechServiceTask(Context cont, int seq) {
             ctx = cont;
+            seq_num = seq;
         }
 
         public void run() {
@@ -103,12 +145,9 @@ public class MainActivity extends ActionBarActivity {
             * Timer expired while waiting for speech-recognition service
             * Treat it as - user didn't speak for now
             */
-            Log.d("this", "speechService Timer expired. Cleaning up...");
-            resultIntent = new Intent(ctx, Jarvis.class);
-            resultIntent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_VOICE_RECOGNITION_RESULT);
-            resultIntent.putExtra(MyReceiver.EXTRA_VALUE, (String)null);
-            stopListening();
-            MyReceiver.startWakefulService(ctx, resultIntent);
+            Log.d("this", "speechService Timer expired. Notifying Main thread...");
+            Message msg = speech_timer_handler.obtainMessage(seq_num, ctx);
+            msg.sendToTarget();
             //finish();
 
 
@@ -171,7 +210,6 @@ public class MainActivity extends ActionBarActivity {
         });
 
         Button bt = (Button)findViewById(R.id.GoButton);
-        bt.setEnabled(true);
         bt.setOnClickListener(new Button.OnClickListener() {
 
             public void onClick(View bt) {
@@ -188,7 +226,7 @@ public class MainActivity extends ActionBarActivity {
             handleRequestFromJarvis(intent);
         } else {
             // User triggered app start
-            start_self_sync();
+            update_ui();
         }
     }
 
@@ -198,7 +236,6 @@ public class MainActivity extends ActionBarActivity {
     }
 
     private void stopListening() {
-        Button bt = (Button)findViewById(R.id.GoButton);
 
         if (sr != null) {
             sr.stopListening();
@@ -206,16 +243,20 @@ public class MainActivity extends ActionBarActivity {
             sr = null;
         }
 
-        bt.setEnabled(true);
     }
 
     @Override
     protected void onDestroy() {
 
         if (sr != null) {
-            Log.d("this", "Stopping listening");
-            sr.stopListening();
-            sr.destroy();
+            // Ideally should not happen, but if it does, that means Jarvis is waiting
+            // for speech recognition results
+            stopListening();
+
+            resultIntent = new Intent(this, Jarvis.class);
+            resultIntent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_VOICE_RECOGNITION_RESULT);
+            resultIntent.putExtra(MyReceiver.EXTRA_VALUE, (String)null);
+            MyReceiver.startWakefulService(this, resultIntent);
         }
 
         super.onDestroy();
@@ -234,6 +275,11 @@ public class MainActivity extends ActionBarActivity {
         public void onBeginningOfSpeech() {
 
             Log.d("this", "onBeginningOfSpeech");
+
+            // Just in case readyForSpeech does not get called
+            is_ready_for_speech = true;
+            update_ui();
+
             restart_speech_recognition_timer(ctx);
         }
 
@@ -245,6 +291,10 @@ public class MainActivity extends ActionBarActivity {
         public void onEndOfSpeech() {
 
             Log.d("this", "onEndOfSpeech");
+
+            is_ready_for_speech = false;
+            update_ui();
+
             restart_speech_recognition_timer(ctx);
         }
 
@@ -256,6 +306,11 @@ public class MainActivity extends ActionBarActivity {
             * User speechServiceTimer object as a check for it
              */
             if (speechServiceTimer != null) {
+
+                is_listening = false;
+                is_ready_for_speech = false;
+                update_ui();
+
                 Log.d("this", "onError: " + String.valueOf(error));
                 speechServiceTimer.cancel();
                 speechServiceTimer = null;
@@ -282,6 +337,10 @@ public class MainActivity extends ActionBarActivity {
         public void onReadyForSpeech(Bundle params) {
 
             Log.d("this", "onReadyForSpeech");
+
+            is_ready_for_speech = true;
+            update_ui();
+
             restart_speech_recognition_timer(ctx);
         }
 
@@ -294,6 +353,10 @@ public class MainActivity extends ActionBarActivity {
             * User speechServiceTimer object as a check for it
              */
             if (speechServiceTimer != null) {
+
+                is_listening = false;
+                is_ready_for_speech = false;
+                update_ui();
 
                 Log.d("this", "Processing onResults...");
                 speechServiceTimer.cancel();
@@ -330,16 +393,17 @@ public class MainActivity extends ActionBarActivity {
         }
 
         speechServiceTimer = new Timer();
-        speechTask = new speechServiceTask(ctx);
+        speech_timer_seq_num++;
+        speechTask = new speechServiceTask(ctx, speech_timer_seq_num);
         speechServiceTimer.schedule(speechTask, 5000);  // 5 second timer
     }
 
-    private void start_speech_recognition() {
-        Button bt = (Button)findViewById(R.id.GoButton);
-
-        bt.setEnabled(false);
+    private void start_speech_recognition(boolean offline_mode) {
 
         Log.d("this", "Starting speech recognition in Main activity");
+
+
+        sr = SpeechRecognizer.createSpeechRecognizer(this);
         sr.setRecognitionListener(myRecognitionListener);
 
         /*
@@ -349,6 +413,8 @@ public class MainActivity extends ActionBarActivity {
         restart_speech_recognition_timer(this);
 
 
+        is_listening = true;
+        update_ui();
 
         Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
@@ -565,10 +631,7 @@ public class MainActivity extends ActionBarActivity {
     }
 
     private void command_speech_recognition() {
-        Button bt = (Button)findViewById(R.id.GoButton);
         Intent i = new Intent(this, Jarvis.class);
-
-        bt.setEnabled(false);
 
         i.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_START_VOICE_RECOGNITION);
         MyReceiver.startWakefulService(this, i);

@@ -25,9 +25,10 @@
     </group>
     <group name="text_to_hubby">
         <action name="VOCI_SMS_TO_HUBBY"></action>
-        <match>.*reply.*her.*saying(.*)</match>
-        <match>.*send.*her.*saying(.*)</match>
-        <match>.*send.*wife.*saying(.*)</match>
+        <match>.*tell her(.*)</match>
+        <match>.*ask her(.*)</match>
+        <match>.*tell my wife(.*)</match>
+        <match>.*ask my wife(.*)</match>
     </group>
     <group name="weather">
         <action name="VOCI_FETCH_WEATHER"></action>
