@@ -190,10 +190,13 @@ public class MainActivity extends ActionBarActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.app_layout);
+
+        String assistant = prefs.getString(getString(R.string.voice_assistant), "???");
+        getSupportActionBar().setTitle(assistant);
 
         myRecognitionListener = new MyRecognitionListener(this);
 
@@ -267,14 +270,25 @@ public class MainActivity extends ActionBarActivity {
 
     private class MyRecognitionListener implements RecognitionListener {
         Context ctx;
+        private boolean recognition_started = false;
+
+        public void setNewRecognition() {
+            /*
+            * Since we use the same RecogntionListener across all speech recognitions
+            * Use this function to refresh from outside.
+             */
+            recognition_started = false;
+        }
 
         public MyRecognitionListener(Context context) {
+
             ctx = context;
         }
 
         public void onBeginningOfSpeech() {
 
             Log.d("this", "onBeginningOfSpeech");
+            recognition_started = true;
 
             // Just in case readyForSpeech does not get called
             is_ready_for_speech = true;
@@ -300,6 +314,14 @@ public class MainActivity extends ActionBarActivity {
 
         public void onError(int error) {
 
+            if (!recognition_started && error == SpeechRecognizer.ERROR_NO_MATCH) {
+                /*
+                * Known issue that sometimes onError(7) gets called even before
+                * ReadyforSpeech. Advised on social media to ignore it
+                 */
+                Log.d("this", "onError: ERROR_NO_MATCH before onReady. Ignoring...");
+                return;
+            }
               /*
             * We have seen getting multiple events (onError after onResult)
             * Make sure we process them and poke Jarvis only once
@@ -337,6 +359,8 @@ public class MainActivity extends ActionBarActivity {
         public void onReadyForSpeech(Bundle params) {
 
             Log.d("this", "onReadyForSpeech");
+
+            recognition_started = true;
 
             is_ready_for_speech = true;
             update_ui();
@@ -404,6 +428,7 @@ public class MainActivity extends ActionBarActivity {
 
 
         sr = SpeechRecognizer.createSpeechRecognizer(this);
+        myRecognitionListener.setNewRecognition();   //runtime constructor for persistent object
         sr.setRecognitionListener(myRecognitionListener);
 
         /*

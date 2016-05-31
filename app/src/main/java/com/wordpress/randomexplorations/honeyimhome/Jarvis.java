@@ -939,8 +939,37 @@ public class Jarvis extends IntentService {
 
     }
 
-    public void processIntent() {
 
+    private void process_hubbys_message() {
+        String message = null;
+
+        if (connected_to_car) {
+            /*
+                * Play the current message, but also queue an intent to start the
+                * conversation.
+                * Since the current (SMS) intent is wakeful, so we set it as the conversation
+                * intent, and enqueue a new intent for playing the message.
+                */
+            message = runningIntent.getStringExtra(MyReceiver.EXTRA_VALUE);
+            Intent i = new Intent();
+            i.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_MESSAGE_TO_PLAY);
+            i.putExtra(MyReceiver.EXTRA_VALUE, message);
+
+            first_conv = true;
+            runningIntent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_CONVERSATION_RUNNING);
+            recognition_retry = MAX_RECOGNITION_RETRY;
+            workList.add(runningIntent);
+
+            runningIntent = i;
+            play_message(message);
+        } else {
+            // Not connected to car, so no play and no conversation
+            Log.d("this", "Not playing hubby's message as not connected to car");
+            cleanupIntent();
+        }
+    }
+
+    public void processIntent() {
         String message = null;
         SharedPreferences prefs =
                 PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
@@ -1001,24 +1030,7 @@ public class Jarvis extends IntentService {
                 break;
 
             case MyReceiver.EXTRA_PURPOSE_SMS_RECEIVED:
-                /*
-                * Play the current message, but also queue an intent to start the
-                * conversation.
-                * Since the current (SMS) intent is wakeful, so we set it as the conversation
-                * intent, and enqueue a new intent for playing the message.
-                */
-                message = runningIntent.getStringExtra(MyReceiver.EXTRA_VALUE);
-                Intent i = new Intent();
-                i.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_MESSAGE_TO_PLAY);
-                i.putExtra(MyReceiver.EXTRA_VALUE, message);
-
-                first_conv = true;
-                runningIntent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_CONVERSATION_RUNNING);
-                recognition_retry = MAX_RECOGNITION_RETRY;
-                workList.add(runningIntent);
-
-                runningIntent = i;
-                play_message(message);
+                process_hubbys_message();
                 break;
 
             case MyReceiver.EXTRA_PURPOSE_CONVERSATION_RUNNING:
