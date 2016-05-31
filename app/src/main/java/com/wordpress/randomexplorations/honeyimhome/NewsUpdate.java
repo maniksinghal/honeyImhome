@@ -111,26 +111,28 @@ public class NewsUpdate extends AsyncTask<URL, Void, Void> {
     protected void onPostExecute(Void result) {
 
         String message = null;
+        ArrayList<String> list = new ArrayList<>();
         if (!news.isEmpty()) {
-            // We were able to fetch some news items
-            message = "Top news of the day";
+            list.add("Top news of the day");
 
             // First item
             String item = news.remove(0);
-            message += ", " + item;
+            list.add(item);
 
             while (!news.isEmpty()) {
-                message += ", Next news, ";
-                message += news.remove(0);
+                list.add(news.remove(0));
 
             }
+
+            jarvis.processMessagesIntent(list);
         } else {
             message = "Could not contact news service";
+
+            List<String> mlist = new ArrayList();
+            mlist.add(MyReceiver.EXTRA_IS_NEWS_UPDATE);
+            jarvis.processIntent(message, mlist);
         }
 
-        List<String> list = new ArrayList();
-        list.add(MyReceiver.EXTRA_IS_NEWS_UPDATE);
-        jarvis.processIntent(message, list);
 
         return;
     }

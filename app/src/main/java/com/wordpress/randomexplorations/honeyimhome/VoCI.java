@@ -29,6 +29,7 @@ public class VoCI {
     public static final String VOCI_REPEAT_REJECTED_REQUEST = "VOCI_REPEAT_REJECTED_REQUEST";
     public static final String VOCI_END_SESSION = "VOCI_END_SESSION";
     public static final String VOCI_KEEP_LISTENING = "VOCI_KEEP_LISTENING";
+    public static final String VOCI_PLAY_NEWS = "VOCI_PLAY_NEWS";
 
 
     public VoCI(Context ctx, String name) {

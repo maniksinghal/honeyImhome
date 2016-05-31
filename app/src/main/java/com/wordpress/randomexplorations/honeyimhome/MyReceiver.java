@@ -52,6 +52,7 @@ public class MyReceiver extends WakefulBroadcastReceiver {
     public static final String EXTRA_ORIG_LOCATION = "com.wordpress.randomexplorations.honeyimhome.orig_loc";
     public static final String EXTRA_DEST_LOCATION = "com.wordpress.randomexplorations.honeyimhome.dest_loc";
     public static final String EXTRA_DEST_NAME = "com.wordpress.randomexplorations.honeyimhome.dest_name";
+    public static final String EXTRA_MESSAGE_LIST = "com.wordpress.randomexplorations.honeyimhome.message_list";
 
     // Play the message with this intent even if not connected to car.
     // Used by internally generated messages.

@@ -11,6 +11,7 @@ import android.speech.tts.UtteranceProgressListener;
 import android.util.Log;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -38,6 +39,9 @@ public class MessageSpeaker extends UtteranceProgressListener implements
     public boolean ready = false;
     private boolean waiting_for_tts = false;
     private boolean waiting_for_sco = false;
+
+    public static final String TRACK_UTTERANCE_ID = "com.wordpress.randomexplorations.honeyimhome.utterance_id";
+    public static final String NOTRACK_UTTERANCE_ID = "com.wordpress.randomexplorations.honeyimhome.no_track_utterance_id";
 
     public MessageSpeaker(Jarvis jvs, Context ctx) {
         jarvis = jvs;
@@ -257,11 +261,35 @@ public class MessageSpeaker extends UtteranceProgressListener implements
     public void speak(String message) {
         if (ready) {
             Log.d("this", "TTS: Speaking: " + message);
-            tts.speak(message, TextToSpeech.QUEUE_ADD, tts_parameters, "MyUtteranceId");
+            tts.speak(message, TextToSpeech.QUEUE_ADD, tts_parameters, MessageSpeaker.TRACK_UTTERANCE_ID);
         } else {
-            Log.d("this", "MessageSpeaker: TTS not ready");
+            Log.d("this", "ERROR: MessageSpeaker: TTS not ready");
             jarvis.cleanupIntent();
         }
+    }
+
+    public void speak(List<String> list, int pause_interval_ms) {
+        if (ready) {
+            int size = list.size();
+            String utter_id = MessageSpeaker.NOTRACK_UTTERANCE_ID;
+            Log.d("this", "MessageSpeaker: Playing list of " + size + " items with pause interval: " + pause_interval_ms);
+            for (int i = 0; i < size; i++) {
+                if (i > 0 && pause_interval_ms > 0) {
+                    // Not the first message
+                    tts.playSilentUtterance(pause_interval_ms, TextToSpeech.QUEUE_ADD, utter_id);
+                }
+
+                if (i == size-1) {
+                    // This is going to be the last string
+                    utter_id = MessageSpeaker.TRACK_UTTERANCE_ID;
+                }
+                tts.speak(list.get(i), TextToSpeech.QUEUE_ADD, tts_parameters, utter_id);
+            }
+        } else {
+            Log.d("this", "ERROR: MessageSpeaker: TTS not ready");
+            jarvis.cleanupIntent();
+        }
+
     }
 
     public void onStart(String utter_id) { }
@@ -274,8 +302,10 @@ public class MessageSpeaker extends UtteranceProgressListener implements
         onDone(utter_id);
     }
     public void onDone(String utter_id) {
-        jarvis.update_last_greeting_time();
-        jarvis.cleanupIntent();
+        if (utter_id.equals(MessageSpeaker.TRACK_UTTERANCE_ID)) {
+            jarvis.update_last_greeting_time();
+            jarvis.cleanupIntent();
+        }
     }
 
     private void stopSCO() {

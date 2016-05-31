@@ -657,19 +657,10 @@ public class Jarvis extends IntentService {
         return;
     }
 
-
-    private void play_message(String message, boolean store) {
-
+    private void play_message(ArrayList<String> list, int interval_ms) {
+        String message = list.get(0);
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         Boolean use_sco = prefs.getBoolean(getString(R.string.bluetooth_sco), false);
-        Log.d("this", "Jarvis: Playing " + message + " with use_sco: " + use_sco);
-
-        if (store) {
-            // Store the message as well
-            SharedPreferences.Editor editor = prefs.edit();
-            editor.putString(getString(R.string.repeat_last_message), message);
-            editor.commit();
-        }
 
         if (!connected_to_car &&
                 !runningIntent.getBooleanExtra(MyReceiver.EXTRA_FORCE_PLAY, false)) {
@@ -681,8 +672,6 @@ public class Jarvis extends IntentService {
             }
         }
 
-
-
         if (!speaker.ready) {
             if (!connected_to_car) {
                 // Can't use SCO
@@ -693,6 +682,21 @@ public class Jarvis extends IntentService {
             return;
         }
 
+        speaker.speak(list, interval_ms);
+    }
+
+
+    private void play_message(String message, boolean store) {
+
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+
+        if (store) {
+            // Store the message as well
+            SharedPreferences.Editor editor = prefs.edit();
+            editor.putString(getString(R.string.repeat_last_message), message);
+            editor.commit();
+        }
+
         // Speaker is ready
         // Generate user greeting message
         String greeting = generate_greeting();
@@ -701,7 +705,9 @@ public class Jarvis extends IntentService {
         }
 
         // All ready to speak?
-        speaker.speak(message);
+        ArrayList<String> list = new ArrayList<>();
+        list.add(message);
+        play_message(list, 0);
 
         return;
 
@@ -909,7 +915,11 @@ public class Jarvis extends IntentService {
             runningIntent.putExtra(MyReceiver.EXTRA_VALUE, message);
             play_message(message, true); //store as last played message as well
 
-
+        } else if (action.equals(VoCI.VOCI_PLAY_NEWS)) {
+            runningIntent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_MESSAGE_TO_PLAY);
+            runningIntent.putExtra(MyReceiver.EXTRA_VALUE, 1000);  // pause-interval ms
+            new NewsUpdate(this).execute(null, null, null);
+            
         } else {
             // Default case
             Log.d("this", "No action associated with interpreted voice command");
@@ -997,12 +1007,19 @@ public class Jarvis extends IntentService {
         Log.d("this", "Processing intent with purpose: " + purpose);
         switch(purpose) {
             case MyReceiver.EXTRA_PURPOSE_MESSAGE_TO_PLAY:
-                message = runningIntent.getStringExtra(MyReceiver.EXTRA_VALUE);
+
+                ArrayList<String> list = runningIntent.getStringArrayListExtra(MyReceiver.EXTRA_MESSAGE_LIST);
                 boolean store = runningIntent.getBooleanExtra(MyReceiver.EXTRA_STORE_MSG, true);
-                if (message != null) {
-                    play_message(message, store);
+                if (list != null) {
+                    int interval = runningIntent.getIntExtra(MyReceiver.EXTRA_VALUE, 0);
+                    play_message(list, interval);
                 } else {
-                    cleanupIntent();
+                    message = runningIntent.getStringExtra(MyReceiver.EXTRA_VALUE);
+                    if (message != null) {
+                        play_message(message, store);
+                    } else {
+                        cleanupIntent();
+                    }
                 }
                 break;
 
@@ -1044,6 +1061,12 @@ public class Jarvis extends IntentService {
                 break;
 
             case MyReceiver.EXTRA_PURPOSE_FETCH_NEWS:
+                /*
+                * Call NewsUpdate which shall prepare the news list and call-back Jarvis
+                * Setup the pause-interval between news items here
+                 */
+                runningIntent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_MESSAGE_TO_PLAY);
+                runningIntent.putExtra(MyReceiver.EXTRA_VALUE, 1000);  // pause-interval ms
                 new NewsUpdate(this).execute(null, null, null);
                 break;
 
@@ -1127,6 +1150,12 @@ public class Jarvis extends IntentService {
         }
 
         return;
+    }
+
+    public void processMessagesIntent(ArrayList<String> list) {
+        // Jarvis should have already set-up the pause-interval in runningIntent
+        runningIntent.putStringArrayListExtra(MyReceiver.EXTRA_MESSAGE_LIST, list);
+        processIntent();
     }
 
     public void processIntent(String message, List<String> bools) {

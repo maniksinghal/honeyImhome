@@ -46,6 +46,10 @@
         <action name="VOCI_KEEP_LISTENING"></action>
         <match>.*hold.*line.*</match>
     </group>
+    <group name="play_news">
+        <action name="VOCI_PLAY_NEWS"></action>
+        <match>.*play.*news.*</match>
+    </group>
 
 
 
