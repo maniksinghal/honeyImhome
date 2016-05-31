@@ -73,6 +73,7 @@ public class MyReceiver extends WakefulBroadcastReceiver {
     public static final int EXTRA_PURPOSE_CONVERSATION_RUNNING = 12;
     public static final int EXTRA_PURPOSE_POWER_STATE_CHANGED = 13;
     public static final int EXTRA_PURPOSE_SYNC_MAIN_ACTIVITY = 14;
+    public static final int EXTRA_PURPOSE_POKE_ACTIVITY_BACK = 15;
 
     public static final String AM_IN_CAR = "com.wordpress.randomexplorations.honeyimhome.am_in_car";
 

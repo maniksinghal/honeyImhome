@@ -56,6 +56,7 @@ public class Jarvis extends IntentService {
     private boolean first_conv = false;
 
     private Timer wifi_timer = null;
+    private Timer poke_timer = null;
 
     public Jarvis() {
         super("Jarvis");
@@ -173,6 +174,8 @@ public class Jarvis extends IntentService {
         }
     }
 
+    // @todo: Running TimerTask in service is buggy, as it runs in another thread
+    // @todo: and other thread would start accessing workList/running-intents in parallel.
     /*
     * Timer run whenever wifi-state change event is received to
     * wait for multiple wifi events to stablize, and act on only the
@@ -198,6 +201,21 @@ public class Jarvis extends IntentService {
 
         }
 
+    }
+
+    private class poke_activity_back extends TimerTask {
+        public void run() {
+            if (runningIntent == null) {
+                Log.d("this", "Running intent NULL!!");
+                return;
+            }
+
+            // Poke activity
+            poke_timer = null;
+            sync_main_activity(true);
+            cleanupIntent();
+
+        }
     }
 
     @Override
@@ -905,11 +923,11 @@ public class Jarvis extends IntentService {
         return;
     }
 
-    private void sync_main_activity(boolean disconnecting_from_car) {
+    private void sync_main_activity(boolean force_sync) {
         SharedPreferences prefs =
                 PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
 
-        if (!connected_to_car && !disconnecting_from_car) {
+        if (!connected_to_car && !force_sync) {
               // No need, main-activity may not be spawned
             Log.d("this", "Not notifying main activity as not connected to car");
             return;
@@ -1089,6 +1107,17 @@ public class Jarvis extends IntentService {
                 boolean power_state = runningIntent.getBooleanExtra(MyReceiver.EXTRA_VALUE, false);
                 handle_power_state_change(power_state);
                 cleanupIntent();
+                break;
+
+            /* Poke the main-activity back in the specified interval */
+            case MyReceiver.EXTRA_PURPOSE_POKE_ACTIVITY_BACK:
+                int interval = runningIntent.getIntExtra(MyReceiver.EXTRA_VALUE, 5000);
+
+                Log.d("this", "Poking back main activity in " + interval/1000 + " seconds");
+                poke_timer = new Timer();
+                poke_timer.schedule(new poke_activity_back(), interval);
+                // Hold the running-intent to disallow other operations
+                // Timer event shall release it
                 break;
 
 

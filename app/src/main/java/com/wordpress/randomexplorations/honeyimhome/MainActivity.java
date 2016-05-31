@@ -20,6 +20,7 @@ import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutCompat;
 import android.util.Log;
 import android.view.Menu;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.MenuItem;
 import android.view.WindowManager;
@@ -189,6 +190,15 @@ public class MainActivity extends ActionBarActivity {
     }
 
     @Override
+    protected void onResume() {
+
+        super.onResume();
+
+        startWeatherUpdate();
+        update_ui();
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
 
@@ -213,24 +223,57 @@ public class MainActivity extends ActionBarActivity {
         });
 
         Button bt = (Button)findViewById(R.id.GoButton);
-        bt.setOnClickListener(new Button.OnClickListener() {
+        /*bt.setOnClickListener(new Button.OnClickListener() {
 
             public void onClick(View bt) {
                 command_speech_recognition();
             }
-        });
+        });*/
 
-        startWeatherUpdate();
+        bt.setOnTouchListener(new Button.OnTouchListener() {
+            private int motion_events = 0;
+            private static final int MOTION_EVENT_THRESHOLD = 5;
+
+            public boolean onTouch(View view, MotionEvent event) {
+                switch(event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        return true;
+                    case MotionEvent.ACTION_MOVE:
+                        motion_events++;
+                        return true;
+                    case MotionEvent.ACTION_BUTTON_PRESS:
+                        Log.d("this", "Got Button press");
+                        return true;
+                    case MotionEvent.ACTION_UP:
+                        Log.d("this", "Got Go Button ACTION_UP after " + motion_events + " moves");
+                        int events = motion_events;
+                        motion_events = 0;
+                        if (events > MOTION_EVENT_THRESHOLD) {
+                            // This was a drag
+                            command_speech_recognition(true);
+                        } else {
+                            // This was a click
+                            command_speech_recognition(false);
+                        }
+                        return true;
+                    case MotionEvent.ACTION_BUTTON_RELEASE:
+                        Log.d("this", "Got Button release");
+                    default:
+                        return true;
+
+                }
+            }
+
+        });
 
         Intent intent = getIntent();
         int value = intent.getIntExtra(MyReceiver.EXTRA_PURPOSE, -1);
 
         if (value != -1) {
             handleRequestFromJarvis(intent);
-        } else {
-            // User triggered app start
-            update_ui();
         }
+
+        // onResume will do weather update and update_ui()
     }
 
     @Override
@@ -644,7 +687,7 @@ public class MainActivity extends ActionBarActivity {
         } else if (id == R.id.action_get_bills) {
             get_bill_payments();
         } else if (id == R.id.action_start_SR) {
-            command_speech_recognition();
+            command_speech_recognition(false);
         } else if (id == R.id.clear_logging) {
             clear_logging();
         } else if (id == R.id.show_logging) {
@@ -655,10 +698,26 @@ public class MainActivity extends ActionBarActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    private void command_speech_recognition() {
-        Intent i = new Intent(this, Jarvis.class);
+    private void command_speech_recognition(boolean is_external) {
 
-        i.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_START_VOICE_RECOGNITION);
-        MyReceiver.startWakefulService(this, i);
+        if (is_external) {
+            /*
+            * We are going to launch Google voice, which launches another activity.
+            * Schedule Jarvis to bring us back to fore-ground in some time
+             */
+            Intent i = new Intent(this, Jarvis.class);
+            i.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_POKE_ACTIVITY_BACK);
+            i.putExtra(MyReceiver.EXTRA_VALUE, 20000); // 20 seconds
+            MyReceiver.startWakefulService(this, i);
+
+            Log.d("this", "Launching google voice assist");
+            Intent gl = new Intent("android.intent.action.VOICE_ASSIST");
+            startActivity(gl);
+
+        } else {
+            Intent i = new Intent(this, Jarvis.class);
+            i.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_START_VOICE_RECOGNITION);
+            MyReceiver.startWakefulService(this, i);
+        }
     }
 }
