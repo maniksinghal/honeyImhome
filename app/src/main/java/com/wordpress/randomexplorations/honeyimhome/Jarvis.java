@@ -1004,6 +1004,16 @@ public class Jarvis extends IntentService {
         }
     }
 
+    private void setIntentSummary(String summary, boolean force_sync) {
+        SharedPreferences prefs =
+                PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        SharedPreferences.Editor edit = prefs.edit();
+        edit.putString(getString(R.string.intentSummary), summary);
+        edit.commit();
+        sync_main_activity(force_sync);
+
+    }
+
     public void processIntent() {
         String message = null;
         SharedPreferences prefs =
@@ -1096,6 +1106,7 @@ public class Jarvis extends IntentService {
 
                     // Fill up recognition retries for next time
                     recognition_retry = MAX_RECOGNITION_RETRY;
+                    setIntentSummary(null, true); // Main-activity must be running when running voice-recognition
                     cleanupIntent();
                 }
                 break;
@@ -1129,6 +1140,9 @@ public class Jarvis extends IntentService {
                     Log.d("this", "Voice recognition results: Null message");
                     cleanupIntent();
                 } else {
+                    // Voice recognition is active only through main-activity, so force-sync
+                    // the UI update
+                    setIntentSummary("heard:     " + msg, true);  // display the message read on user-screen
                     handle_voice_command(msg);
                 }
                 break;

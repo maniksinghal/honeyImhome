@@ -90,9 +90,10 @@ public class MainActivity extends ActionBarActivity {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         String layout_color = null;
 
+
         connected_to_car = prefs.getBoolean(MyReceiver.AM_IN_CAR, false);
         is_phone_charging = prefs.getBoolean(getString(R.string.battery_charging_state), false);
-        user_notification = prefs.getString(getString(R.string.user_notification), null);
+        user_notification = prefs.getString(getString(R.string.intentSummary), null);
 
         if (is_ready_for_speech) {
             layout_color = getString(R.string.color_ready_for_speech);
@@ -132,6 +133,13 @@ public class MainActivity extends ActionBarActivity {
         } else {
             getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         }
+
+        TextView tv = (TextView)findViewById(R.id.notification);
+        if (user_notification == null) {
+            // Set user-notification on screen
+            user_notification = "";
+        }
+        tv.setText(user_notification);
     }
 
     private void handleRequestFromJarvis(Intent intent) {

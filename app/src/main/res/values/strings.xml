@@ -41,12 +41,14 @@
 
     <!-- String to display in user-notification area of Main activity -->
     <string name="user_notification">user_notification</string>
+    <string name="intentSummary">intentSummary</string>
 
     <!-- colors -->
     <string name="button_color_disconnected">#FFFFFF</string>
-    <string name="button_color_connected">#0000FF</string>
+    <string name="button_color_connected">#00E6E6</string>
     <string name="color_dashboard_gray">#404040</string>
-    <string name="color_ready_for_speech">#33CC00</string>
+    <string name="color_ready_for_speech">#134D00</string>
+
 
     <string name="ringer_volume">ringer volume</string>
     <string-array name="paired_devices">
