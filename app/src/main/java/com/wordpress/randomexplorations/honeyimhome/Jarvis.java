@@ -266,7 +266,14 @@ public class Jarvis extends IntentService {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
 
-        Log.d("this", "Received intent: " + intent.getIntExtra(MyReceiver.EXTRA_PURPOSE, -1));
+        int purpose = intent.getIntExtra(MyReceiver.EXTRA_PURPOSE, -1);
+        if (runningIntent != null) {
+            int runningIntentPurpose = runningIntent.getIntExtra(MyReceiver.EXTRA_PURPOSE, -1);
+            Log.d("this", "Received intent " + purpose + "while running " + runningIntentPurpose);
+        } else {
+            Log.d("this", "Received intent: " + purpose);
+        }
+
 
         // Process Exceptions...
 
@@ -275,7 +282,7 @@ public class Jarvis extends IntentService {
         * During this timer, we are holding the intent, but we want to allow other wifi-state
         * change intents to get processed.
         */
-        int purpose = intent.getIntExtra(MyReceiver.EXTRA_PURPOSE, -1);
+
         if (purpose == MyReceiver.EXTRA_PURPOSE_WIFI_STATE_CHANGE) {
             if (runningIntent != null && wifi_timer != null) {
                 // Free-up previous WIFI_STATE_CHANGE event and schedule this one at top of queue
@@ -919,7 +926,7 @@ public class Jarvis extends IntentService {
             runningIntent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_MESSAGE_TO_PLAY);
             runningIntent.putExtra(MyReceiver.EXTRA_VALUE, 1000);  // pause-interval ms
             new NewsUpdate(this).execute(null, null, null);
-            
+
         } else {
             // Default case
             Log.d("this", "No action associated with interpreted voice command");

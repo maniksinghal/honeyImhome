@@ -5,6 +5,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.shapes.Shape;
 import android.media.AudioManager;
 import android.os.Build;
 import android.os.Handler;
@@ -25,6 +27,7 @@ import android.view.View;
 import android.view.MenuItem;
 import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.speech.RecognizerIntent;
@@ -93,25 +96,41 @@ public class MainActivity extends ActionBarActivity {
 
         if (is_ready_for_speech) {
             layout_color = getString(R.string.color_ready_for_speech);
-        } else if (connected_to_car) {
-            // Activate the background color
-            layout_color = getString(R.string.color_connected);
         } else {
-            layout_color = getString(R.string.color_disconnected);
+            layout_color = getString(R.string.color_dashboard_gray);
         }
         li.setBackgroundColor(Color.parseColor(layout_color));
+        //getSupportActionBar().hide();
+
+
+        GradientDrawable gd = new GradientDrawable();
+        gd.setShape(GradientDrawable.OVAL);
+        int color = 0;
+
+        if (connected_to_car) {
+            // Activate the background color
+            color = Color.parseColor(getString(R.string.button_color_connected));
+        } else {
+            color = Color.parseColor(getString(R.string.button_color_disconnected));
+        }
+        gd.setStroke(3, color);
+
+        if (is_listening) {
+            bt.setText("...");
+            bt.setEnabled(false);
+        } else {
+            bt.setText("Go");
+            bt.setEnabled(true);
+        }
+
+        bt.setBackground(gd);
+        bt.setTextColor(color);
 
         if (is_phone_charging && connected_to_car) {
             // Keep screen always ON
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         } else {
             getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        }
-
-        if (is_listening) {
-            bt.setEnabled(false);
-        } else {
-            bt.setEnabled(true);
         }
     }
 
@@ -123,7 +142,14 @@ public class MainActivity extends ActionBarActivity {
             boolean offline_mode = intent.getBooleanExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, false);
             start_speech_recognition(offline_mode);
         } else if (value == MyReceiver.EXTRA_PURPOSE_SYNC_MAIN_ACTIVITY) {
-            // Nothing special for now, except updating UI
+            // If we just disconnected from car, then close the activity
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+            boolean new_state = prefs.getBoolean(MyReceiver.AM_IN_CAR, false);
+            if (connected_to_car && !new_state) {
+                // We disconnected from car, close the activity
+                finish();
+            }
+
         }
 
         update_ui();
@@ -707,7 +733,7 @@ public class MainActivity extends ActionBarActivity {
              */
             Intent i = new Intent(this, Jarvis.class);
             i.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_POKE_ACTIVITY_BACK);
-            i.putExtra(MyReceiver.EXTRA_VALUE, 20000); // 20 seconds
+            i.putExtra(MyReceiver.EXTRA_VALUE, 60000); // 1 minute
             MyReceiver.startWakefulService(this, i);
 
             Log.d("this", "Launching google voice assist");
@@ -715,6 +741,10 @@ public class MainActivity extends ActionBarActivity {
             startActivity(gl);
 
         } else {
+
+            is_listening = true;
+            update_ui();
+
             Intent i = new Intent(this, Jarvis.class);
             i.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_START_VOICE_RECOGNITION);
             MyReceiver.startWakefulService(this, i);
