@@ -259,7 +259,8 @@ public class Jarvis extends IntentService {
     /*
     * MyReceiver invoked an intentService which overrides onStartCommand
     * to launch another thread => call onhandleIntent => stop the service
-    * But we need async calls for TextToSpeech and cannot afford getting stopped
+    * But we need async calls for TextToSpeech (service gets called back when TTS is ready) and hence
+    * cannot afford getting stopped
     * So we override this method and instead of the jargon above, perform TTS
     * on this thread itself.
      */
@@ -320,6 +321,23 @@ public class Jarvis extends IntentService {
 
     public void cleanupIntent() {
 
+        /*
+        * If no other intents remain, do a cleanup before releasing the
+        * possible wakelock with the current intent
+         */
+        if (workList.isEmpty()) {
+            // Cleanup all resources
+            if (speaker.ready) {
+                /*
+                * We need to shutdown speaker (at least SCO) as we may not get
+                * notifications when user disconnects SCO (say from car stereo)
+                * if our service is sleeping ??
+                */
+                speaker.shutdown();
+            }
+            setIntentSummary(null, false);
+        }
+
         if (runningIntent != null) {
             // Cleanup runningIntent
 
@@ -332,16 +350,6 @@ public class Jarvis extends IntentService {
         if (!workList.isEmpty()) {
             runningIntent = workList.remove(0);
             processIntent();
-        } else {
-            // Cleanup all resources
-            if (speaker.ready) {
-                /*
-                * We need to shutdown speaker (at least SCO) as we may not get
-                * notifications when user disconnects SCO (say from car stereo)
-                * if our service is sleeping ??
-                */
-                speaker.shutdown();
-            }
         }
 
     }
@@ -503,7 +511,7 @@ public class Jarvis extends IntentService {
         //restore_ringer_volume();
 
         connected_to_car = false;
-        sync_main_activity(true);
+        sync_main_activity(false);
         cleanupIntent();
         return;
     }
@@ -572,7 +580,7 @@ public class Jarvis extends IntentService {
         am.setStreamVolume(AudioManager.STREAM_MUSIC, music_volume, 0);
 
         connected_to_car = true;
-        sync_main_activity(false);   //Update UI
+        sync_main_activity(true);   //Launch UI activity
 
         start_ride(prefs);
 
@@ -654,10 +662,7 @@ public class Jarvis extends IntentService {
 
         // Keep the car-connected intent to hold the wakelock, so that the sub-intents can run
         // without any issue
-        // Change it to CONV_RUNNING to trigger listening to voice command from user.
-        runningIntent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_CONVERSATION_RUNNING);
-        recognition_retry = MAX_RECOGNITION_RETRY;
-        first_conv = true;
+        runningIntent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_INVALID);
         workList.add(insert_location, runningIntent);  // re-queue after above intents.
         runningIntent = null;  // so that it does not get wake-lock-released by cleanupIntent
         cleanupIntent();  // Cleanup current 'connect-to-car' intent and pick up first child-intent
@@ -925,6 +930,7 @@ public class Jarvis extends IntentService {
         } else if (action.equals(VoCI.VOCI_PLAY_NEWS)) {
             runningIntent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_MESSAGE_TO_PLAY);
             runningIntent.putExtra(MyReceiver.EXTRA_VALUE, 1000);  // pause-interval ms
+            setIntentSummary("Playing news from timesofindia.com", false); // UI must be running
             new NewsUpdate(this).execute(null, null, null);
 
         } else {
@@ -943,8 +949,9 @@ public class Jarvis extends IntentService {
     private void sync_main_activity(boolean force_sync) {
         SharedPreferences prefs =
                 PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        boolean ui_running = prefs.getBoolean(getString(R.string.ui_running), false);
 
-        if (!connected_to_car && !force_sync) {
+        if (!ui_running && !force_sync) {
               // No need, main-activity may not be spawned
             Log.d("this", "Not notifying main activity as not connected to car");
             return;
@@ -1084,6 +1091,7 @@ public class Jarvis extends IntentService {
                  */
                 runningIntent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_MESSAGE_TO_PLAY);
                 runningIntent.putExtra(MyReceiver.EXTRA_VALUE, 1000);  // pause-interval ms
+                setIntentSummary("Playing news from timesofindia.com", false); // UI must be running
                 new NewsUpdate(this).execute(null, null, null);
                 break;
 
@@ -1106,7 +1114,7 @@ public class Jarvis extends IntentService {
 
                     // Fill up recognition retries for next time
                     recognition_retry = MAX_RECOGNITION_RETRY;
-                    setIntentSummary(null, true); // Main-activity must be running when running voice-recognition
+                    setIntentSummary(null, false); // Main-activity must be running when running voice-recognition
                     cleanupIntent();
                 }
                 break;
@@ -1142,7 +1150,7 @@ public class Jarvis extends IntentService {
                 } else {
                     // Voice recognition is active only through main-activity, so force-sync
                     // the UI update
-                    setIntentSummary("heard:     " + msg, true);  // display the message read on user-screen
+                    setIntentSummary("heard:     " + msg, false);  // display the message read on user-screen
                     handle_voice_command(msg);
                 }
                 break;

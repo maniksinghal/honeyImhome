@@ -20,6 +20,7 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutCompat;
+import android.text.Html;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MotionEvent;
@@ -95,6 +96,9 @@ public class MainActivity extends ActionBarActivity {
         is_phone_charging = prefs.getBoolean(getString(R.string.battery_charging_state), false);
         user_notification = prefs.getString(getString(R.string.intentSummary), null);
 
+        TextView tv = (TextView)findViewById(R.id.google_label);
+        tv.setVisibility(View.GONE);
+
         if (is_ready_for_speech) {
             layout_color = getString(R.string.color_ready_for_speech);
         } else {
@@ -134,7 +138,7 @@ public class MainActivity extends ActionBarActivity {
             getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         }
 
-        TextView tv = (TextView)findViewById(R.id.notification);
+        tv = (TextView)findViewById(R.id.notification);
         if (user_notification == null) {
             // Set user-notification on screen
             user_notification = "";
@@ -153,8 +157,20 @@ public class MainActivity extends ActionBarActivity {
             // If we just disconnected from car, then close the activity
             SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
             boolean new_state = prefs.getBoolean(MyReceiver.AM_IN_CAR, false);
+            boolean new_charging_state = prefs.getBoolean(getString(R.string.battery_charging_state), false);
             if (connected_to_car && !new_state) {
                 // We disconnected from car, close the activity
+                finish();
+            }
+
+            /*
+            * todo: Following check is subject to jitter.
+            * Temporary off-on in charging state may close the activity.
+             */
+            Log.d("this", "Phone previously charging: " + is_phone_charging + ", now: " + new_charging_state);
+            if (!new_charging_state && is_phone_charging) {
+                // When we switch off car ignition, blue-tooth state remains connected for some-time
+                // but its time to remove phone from dock.
                 finish();
             }
 
@@ -232,12 +248,24 @@ public class MainActivity extends ActionBarActivity {
         update_ui();
     }
 
+
+    private void print_google_label() {
+        TextView tv = (TextView)findViewById(R.id.google_label);
+        String label = "<i><font color='white'>Starting </font> <font color='blue'>G</font><font color='red'>o</font><font color='yellow'>o</font><font color='blue'>g</font><font color='green'>l</font><font color='red'>e</font></i>";
+        tv.setText(Html.fromHtml(label), TextView.BufferType.SPANNABLE);
+        tv.setVisibility(View.VISIBLE);
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        SharedPreferences.Editor edit = prefs.edit();
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.app_layout);
+
+        edit.putBoolean(getString(R.string.ui_running), true);
+        edit.commit();
 
         String assistant = prefs.getString(getString(R.string.voice_assistant), "???");
         getSupportActionBar().setTitle(assistant);
@@ -254,6 +282,16 @@ public class MainActivity extends ActionBarActivity {
                 startWeatherUpdate();
             }
 
+        });
+
+        ImageView newsView = (ImageView)findViewById(R.id.news_icon);
+        newsView.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View view) {
+                Intent i = new Intent(getApplicationContext(), Jarvis.class);
+                i.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_FETCH_NEWS);
+                i.putExtra(MyReceiver.EXTRA_FORCE_PLAY, true);
+                MyReceiver.startWakefulService(getApplicationContext(), i);
+            }
         });
 
         Button bt = (Button)findViewById(R.id.GoButton);
@@ -274,6 +312,10 @@ public class MainActivity extends ActionBarActivity {
                         return true;
                     case MotionEvent.ACTION_MOVE:
                         motion_events++;
+                        if (motion_events == MOTION_EVENT_THRESHOLD) {
+                            // External search
+                            print_google_label();
+                        }
                         return true;
                     case MotionEvent.ACTION_BUTTON_PRESS:
                         Log.d("this", "Got Button press");
@@ -282,7 +324,7 @@ public class MainActivity extends ActionBarActivity {
                         Log.d("this", "Got Go Button ACTION_UP after " + motion_events + " moves");
                         int events = motion_events;
                         motion_events = 0;
-                        if (events > MOTION_EVENT_THRESHOLD) {
+                        if (events >= MOTION_EVENT_THRESHOLD) {
                             // This was a drag
                             command_speech_recognition(true);
                         } else {
@@ -328,6 +370,9 @@ public class MainActivity extends ActionBarActivity {
     @Override
     protected void onDestroy() {
 
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        SharedPreferences.Editor edit = prefs.edit();
+
         if (sr != null) {
             // Ideally should not happen, but if it does, that means Jarvis is waiting
             // for speech recognition results
@@ -338,6 +383,9 @@ public class MainActivity extends ActionBarActivity {
             resultIntent.putExtra(MyReceiver.EXTRA_VALUE, (String)null);
             MyReceiver.startWakefulService(this, resultIntent);
         }
+
+        edit.putBoolean(getString(R.string.ui_running), false);
+        edit.commit();
 
         super.onDestroy();
     }
@@ -735,15 +783,21 @@ public class MainActivity extends ActionBarActivity {
     private void command_speech_recognition(boolean is_external) {
 
         if (is_external) {
+
+
             /*
             * We are going to launch Google voice, which launches another activity.
             * Schedule Jarvis to bring us back to fore-ground in some time
-             */
+            *
+            * ** DISABLING IT FOR NOW
+            * ** as Jarvis gets hung for that time and user cannot initiate any other useful
+            * command in the mean time.
+
             Intent i = new Intent(this, Jarvis.class);
             i.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_POKE_ACTIVITY_BACK);
             i.putExtra(MyReceiver.EXTRA_VALUE, 60000); // 1 minute
             MyReceiver.startWakefulService(this, i);
-
+            */
             Log.d("this", "Launching google voice assist");
             Intent gl = new Intent("android.intent.action.VOICE_ASSIST");
             startActivity(gl);

@@ -38,6 +38,7 @@
     <string name="office_commute_eta">office_commute_eta_enabled</string>
     <string name="notification_volume">notification volume</string>
     <string name="start_speech_recognition">start_speech_recognition</string>
+    <string name="ui_running">ui_running</string>
 
     <!-- String to display in user-notification area of Main activity -->
     <string name="user_notification">user_notification</string>

@@ -43,6 +43,7 @@ public class NewsUpdate extends AsyncTask<URL, Void, Void> {
         XmlPullParser parser = Xml.newPullParser();
         Log.d("this", "NewsUpdate: Parsing response");
         boolean start_parsing = false;
+        String item = null;
 
         try {
             parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false);
@@ -63,6 +64,15 @@ public class NewsUpdate extends AsyncTask<URL, Void, Void> {
                 }
                 depth++;
 
+                /*
+                * Expecting following format
+                * ...
+                * <item>
+                *     <title>News title</title>
+                *     ...
+                *     <description>News description</description> => description may be a link
+                * </item>
+                 */
                 String name = parser.getName();
                 //Log.d("this", "Got start-tag: " + name);
                 if (name.equals("item")) {
@@ -72,9 +82,24 @@ public class NewsUpdate extends AsyncTask<URL, Void, Void> {
                 } else if (name.equals("title") && start_parsing) {
                     // <title>.....</title>
                     if (parser.next() == XmlPullParser.TEXT) {
-                        String item = parser.getText();
+                        item = parser.getText();
                         Log.d("this", "Got news: " + item);
+
+                        // Convert
+                        // Family equally guilty, imprison with corrupt officer: Court
+                        // to
+                        // Family equally guilty, imprison with corrupt officer, SAYS Court
+                        item = item.replace(":", ", says ");
                         news.add(item);
+                    }
+                } else if (name.equals("description") && start_parsing) {
+                    if (parser.next() == XmlPullParser.TEXT) {
+                        String desc = parser.getText();
+                        if (desc.contains("http")) {
+                            // Description is not textual, but a link, ignore it
+                        } else {
+                            news.add(desc);
+                        }
                     }
                 }
             }
