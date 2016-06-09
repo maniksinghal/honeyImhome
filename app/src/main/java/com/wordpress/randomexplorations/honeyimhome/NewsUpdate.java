@@ -58,11 +58,13 @@ public class NewsUpdate extends AsyncTask<URL, Void, Void> {
                 int event = parser.getEventType();
                 if (event == XmlPullParser.END_TAG) {
                     depth--;
+                    Log.d("this", "depth-- : " + depth);
                     continue;
                 } else if (event != XmlPullParser.START_TAG) {
                     continue;
                 }
                 depth++;
+                Log.d("this", "Parsing next News element.., depth: " + depth);
 
                 /*
                 * Expecting following format
@@ -93,13 +95,16 @@ public class NewsUpdate extends AsyncTask<URL, Void, Void> {
                         news.add(item);
                     }
                 } else if (name.equals("description") && start_parsing) {
-                    if (parser.next() == XmlPullParser.TEXT) {
+                    int next_event = parser.next();
+                    if (next_event == XmlPullParser.TEXT) {
                         String desc = parser.getText();
                         if (desc.contains("http")) {
                             // Description is not textual, but a link, ignore it
                         } else {
                             news.add(desc);
                         }
+                    } else if (next_event == XmlPullParser.END_TAG) {
+                        depth--;
                     }
                 }
             }
@@ -112,6 +117,7 @@ public class NewsUpdate extends AsyncTask<URL, Void, Void> {
 
     }
 
+    @Override
     protected Void doInBackground(URL... urls) {
 
         HttpURLConnection urlConnection = null;
@@ -126,13 +132,16 @@ public class NewsUpdate extends AsyncTask<URL, Void, Void> {
             Log.d("this", "Exception: " + e.getMessage());
         } finally {
             if (urlConnection != null) {
+                Log.d("this", "Checking and disconnecting URL connection");
                 urlConnection.disconnect();
             }
+            Log.d("this", "Disconnected url connection");
         }
 
         return null;
     }
 
+    @Override
     protected void onPostExecute(Void result) {
 
         String message = null;
@@ -149,12 +158,16 @@ public class NewsUpdate extends AsyncTask<URL, Void, Void> {
 
             }
 
+            Log.d("this", "Playing news list");
+
             jarvis.processMessagesIntent(list);
         } else {
             message = "Could not contact news service";
 
             List<String> mlist = new ArrayList();
             mlist.add(MyReceiver.EXTRA_IS_NEWS_UPDATE);
+
+            Log.d("this", "News-fetch: " + message);
             jarvis.processIntent(message, mlist);
         }
 

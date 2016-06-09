@@ -55,8 +55,14 @@ public class Jarvis extends IntentService {
      */
     private boolean first_conv = false;
 
+    private Timer intentMonitor_timer = null;
+
+
     private Timer wifi_timer = null;
+
+    /*
     private Timer poke_timer = null;
+    */
 
     public Jarvis() {
         super("Jarvis");
@@ -203,6 +209,24 @@ public class Jarvis extends IntentService {
 
     }
 
+    /*
+    private class intentMonitorTask extends TimerTask {
+
+
+        //Current intent ran/waited for too long
+        //Kill it to resume operations
+
+        public void run() {
+            if (runningIntent != null) {
+                int purpose = runningIntent.getIntExtra(MyReceiver.EXTRA_PURPOSE, -1);
+                String message = "Task " + purpose + " ran/waited for too long. Killing";
+                sync_main_activity(true, message);
+                cleanupIntent();
+                return;
+            }
+        }
+    }
+
     private class poke_activity_back extends TimerTask {
         public void run() {
             if (runningIntent == null) {
@@ -217,6 +241,7 @@ public class Jarvis extends IntentService {
 
         }
     }
+*/
 
     @Override
     public void onCreate() {
@@ -946,7 +971,7 @@ public class Jarvis extends IntentService {
         return;
     }
 
-    private void sync_main_activity(boolean force_sync) {
+    private void sync_main_activity(boolean force_sync, String message) {
         SharedPreferences prefs =
                 PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         boolean ui_running = prefs.getBoolean(getString(R.string.ui_running), false);
@@ -960,11 +985,18 @@ public class Jarvis extends IntentService {
         Log.d("this", "Starting sync with main activity");
         Intent intent = new Intent(this, MainActivity.class);
         intent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_SYNC_MAIN_ACTIVITY);
+        if (message != null) {
+            intent.putExtra(MyReceiver.EXTRA_VALUE, message);
+        }
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 
         /* Main activity shall read shared-preferences to sync with Jarvis */
         startActivity(intent);
 
+    }
+
+    private void sync_main_activity(boolean force_sync) {
+        sync_main_activity(force_sync, null);
     }
 
     private void handle_power_state_change(boolean power_state) {
@@ -1161,7 +1193,8 @@ public class Jarvis extends IntentService {
                 cleanupIntent();
                 break;
 
-            /* Poke the main-activity back in the specified interval */
+            /*
+            // Poke the main-activity back in the specified interval
             case MyReceiver.EXTRA_PURPOSE_POKE_ACTIVITY_BACK:
                 int interval = runningIntent.getIntExtra(MyReceiver.EXTRA_VALUE, 5000);
 
@@ -1171,6 +1204,7 @@ public class Jarvis extends IntentService {
                 // Hold the running-intent to disallow other operations
                 // Timer event shall release it
                 break;
+          */
 
 
             default:
