@@ -698,6 +698,7 @@ public class Jarvis extends IntentService {
         String message = list.get(0);
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         Boolean use_sco = prefs.getBoolean(getString(R.string.bluetooth_sco), false);
+        Boolean use_phone_speaker = prefs.getBoolean(getString(R.string.prefer_phone_speaker_during_sco), false);
 
         if (!connected_to_car &&
                 !runningIntent.getBooleanExtra(MyReceiver.EXTRA_FORCE_PLAY, false)) {
@@ -715,11 +716,13 @@ public class Jarvis extends IntentService {
                 Log.d("this", "Not using SCO as not connected to car");
                 use_sco = false;
             }
-            speaker.initialize(use_sco);  // Initializer will call us back
+            speaker.initialize(use_sco, use_phone_speaker);  // Initializer will call us back
             return;
         }
 
-        speaker.speak(list, interval_ms);
+        float default_speech_rate = Float.parseFloat(prefs.getString(getString(R.string.default_speech_rate), "1.0"));
+        float speech_rate = runningIntent.getFloatExtra(MyReceiver.EXTRA_SPEECH_RATE, default_speech_rate);
+        speaker.speak(list, interval_ms, speech_rate);
     }
 
 
@@ -772,6 +775,7 @@ public class Jarvis extends IntentService {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         Boolean use_sco = prefs.getBoolean(getString(R.string.bluetooth_sco), false);
         Boolean prefer_offline = prefs.getBoolean(getString(R.string.prefer_offline_recognition), false);
+        Boolean use_phone_speaker = prefs.getBoolean(getString(R.string.prefer_phone_speaker_during_sco), false);
 
         Log.d("this", "Prefer offline recognition: " + prefer_offline);
 
@@ -787,7 +791,7 @@ public class Jarvis extends IntentService {
             /* Speaker shall call us back and lead to re-processing of CONV_RUNNING intent.
              * This would lead to decrementing recognition-retry count, so compensate for it here */
             recognition_retry++;
-            speaker.initialize(use_sco);  // speaker shall call us back and re-process CONV_RUNNING intent.
+            speaker.initialize(use_sco, use_phone_speaker);  // speaker shall call us back and re-process CONV_RUNNING intent.
             return;
         }
 
@@ -956,6 +960,10 @@ public class Jarvis extends IntentService {
             runningIntent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_MESSAGE_TO_PLAY);
             runningIntent.putExtra(MyReceiver.EXTRA_VALUE, 1000);  // pause-interval ms
             setIntentSummary("Playing news from timesofindia.com", false); // UI must be running
+
+            float speech_rate = Float.parseFloat(prefs.getString(getString(R.string.news_speech_rate), "1.0"));
+            runningIntent.putExtra(MyReceiver.EXTRA_SPEECH_RATE, speech_rate);
+
             new NewsUpdate(this).execute(null, null, null);
 
         } else {
@@ -1078,7 +1086,7 @@ public class Jarvis extends IntentService {
                     }
                 }
                 break;
-
+/*
             case MyReceiver.EXTRA_PURPOSE_START_SCO:
 
                 // Override purpose to play success message
@@ -1089,7 +1097,7 @@ public class Jarvis extends IntentService {
                     cleanupIntent();
                 }
                 break;
-
+*/
             case MyReceiver.EXTRA_PURPOSE_CAR_CONNECT:
                 connected_to_car();
                 break;
@@ -1124,6 +1132,10 @@ public class Jarvis extends IntentService {
                 runningIntent.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_MESSAGE_TO_PLAY);
                 runningIntent.putExtra(MyReceiver.EXTRA_VALUE, 1000);  // pause-interval ms
                 setIntentSummary("Playing news from timesofindia.com", false); // UI must be running
+
+                float speech_rate = Float.parseFloat(prefs.getString(getString(R.string.news_speech_rate), "1.0"));
+                runningIntent.putExtra(MyReceiver.EXTRA_SPEECH_RATE, speech_rate);
+
                 new NewsUpdate(this).execute(null, null, null);
                 break;
 

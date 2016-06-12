@@ -47,6 +47,23 @@
         android:summaryOff="Using device audio stream"
         android:summaryOn="Use bluetooth SCO for audio" />
     <CheckBoxPreference
+        android:key="@string/prefer_phone_speaker_during_sco"
+        android:title="Prefer phone-speaker during SCO"
+        android:summaryOff="Using car stereo"
+        android:summaryOn="Using phone speaker"
+        android:enabled="false"
+        android:dependency="@string/bluetooth_sco"/>
+    <EditTextPreference
+        android:key="@string/default_speech_rate"
+        android:title="Default speech rate"
+        android:defaultValue="1.0"
+        android:summary="Default speech rate multiplier" />
+    <EditTextPreference
+        android:key="@string/news_speech_rate"
+        android:title="News speech rate"
+        android:defaultValue="1.0"
+        android:summary="News speech rate multiplier" />
+    <CheckBoxPreference
         android:key="@string/weather_update"
         android:title="Provide weather update"
         android:summaryOff="Weather update turned off"

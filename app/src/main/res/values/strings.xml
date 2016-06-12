@@ -39,6 +39,9 @@
     <string name="notification_volume">notification volume</string>
     <string name="start_speech_recognition">start_speech_recognition</string>
     <string name="ui_running">ui_running</string>
+    <string name="default_speech_rate">default_speech_rate</string>
+    <string name="news_speech_rate">news_speech_rate</string>
+    <string name="prefer_phone_speaker_during_sco">prefer_phone_speaker_during_sco</string>
 
     <!-- String to display in user-notification area of Main activity -->
     <string name="user_notification">user_notification</string>

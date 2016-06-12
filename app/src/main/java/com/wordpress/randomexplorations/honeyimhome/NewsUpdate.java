@@ -58,7 +58,6 @@ public class NewsUpdate extends AsyncTask<URL, Void, Void> {
                 int event = parser.getEventType();
                 if (event == XmlPullParser.END_TAG) {
                     depth--;
-                    Log.d("this", "depth-- : " + depth);
                     continue;
                 } else if (event != XmlPullParser.START_TAG) {
                     continue;
@@ -92,6 +91,7 @@ public class NewsUpdate extends AsyncTask<URL, Void, Void> {
                         // to
                         // Family equally guilty, imprison with corrupt officer, SAYS Court
                         item = item.replace(":", ", says ");
+
                         news.add(item);
                     }
                 } else if (name.equals("description") && start_parsing) {
@@ -101,6 +101,10 @@ public class NewsUpdate extends AsyncTask<URL, Void, Void> {
                         if (desc.contains("http")) {
                             // Description is not textual, but a link, ignore it
                         } else {
+                            /*
+                            // TTS does not pause well on a period, but on comma its ok
+                            desc = desc.replace(". ", ", ");
+                            */
                             news.add(desc);
                         }
                     } else if (next_event == XmlPullParser.END_TAG) {

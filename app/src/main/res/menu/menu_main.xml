@@ -4,10 +4,14 @@
     <item android:id="@+id/action_settings" android:title="@string/action_settings"
         android:orderInCategory="100" app:showAsAction="never" />
     <item android:id="@+id/action_test" android:title="Speak test message" />
+    <!--
     <item android:id="@+id/action_start_sco" android:title="Start SCO" />
+    -->
     <item android:id="@+id/action_fetch_weather" android:title="Fetch Weather" />
     <item android:id="@+id/action_time_to_office" android:title="Fetch time to office" />
+    <!--
     <item android:id="@+id/action_fetch_news" android:title="Fetch News" />
+    -->
     <item android:id="@+id/action_get_params" android:title="Get params" />
     <item android:id="@+id/action_get_bills" android:title="Bill payment details" />
     <item android:id="@+id/action_start_SR" android:title="Start speech recognition" />

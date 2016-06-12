@@ -48,6 +48,7 @@ public class MyReceiver extends WakefulBroadcastReceiver {
     public static final String EXTRA_LAST_WIFI_CONNECTED = "com.wordpress.randomexplorations.honeyimhome.last_wifi_state";
     public static final String EXTRA_LAST_WIFI_EVENT_TIMESTAMP =
             "com.wordpress.randomexplorations.honeyimhome.last_wifi_event_timestamp";
+    public static final String EXTRA_SPEECH_RATE = "com.wordpress.randomexplorations.honeyimhome.speech_rate";
 
     public static final String EXTRA_ORIG_LOCATION = "com.wordpress.randomexplorations.honeyimhome.orig_loc";
     public static final String EXTRA_DEST_LOCATION = "com.wordpress.randomexplorations.honeyimhome.dest_loc";
@@ -63,7 +64,7 @@ public class MyReceiver extends WakefulBroadcastReceiver {
     public static final int EXTRA_PURPOSE_MESSAGE_TO_PLAY = 1;
     public static final int EXTRA_PURPOSE_CAR_CONNECT = 2;
     public static final int EXTRA_PURPOSE_CAR_DISCONNECT = 3;
-    public static final int EXTRA_PURPOSE_START_SCO = 4;
+   // public static final int EXTRA_PURPOSE_START_SCO = 4;
     public static final int EXTRA_PURPOSE_FETCH_WEATHER = 5;
     public static final int EXTRA_PURPOSE_FETCH_NEWS = 6;
     public static final int EXTRA_PURPOSE_WIFI_STATE_CHANGE = 7;

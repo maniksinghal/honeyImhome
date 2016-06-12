@@ -735,12 +735,13 @@ public class MainActivity extends ActionBarActivity {
                 i.putExtra(MyReceiver.EXTRA_VALUE, str);
                 MyReceiver.startWakefulService(this, i);
             }
+            /*
         } else if (id == R.id.action_start_sco) {
             Intent i = new Intent(this, Jarvis.class);
             i.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_START_SCO);
             i.putExtra(MyReceiver.EXTRA_FORCE_PLAY, true);
             MyReceiver.startWakefulService(this, i);
-
+            */
         } else if (id == R.id.action_fetch_weather) {
             Intent i = new Intent(this, Jarvis.class);
             i.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_FETCH_WEATHER);
@@ -759,11 +760,12 @@ public class MainActivity extends ActionBarActivity {
             i.putExtra(MyReceiver.EXTRA_ORIG_LOCATION, orig);
             i.putExtra(MyReceiver.EXTRA_FORCE_PLAY, true);
             MyReceiver.startWakefulService(this, i);
+            /*
         } else if (id == R.id.action_fetch_news) {
             Intent i = new Intent(this, Jarvis.class);
             i.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_FETCH_NEWS);
             i.putExtra(MyReceiver.EXTRA_FORCE_PLAY, true);
-            MyReceiver.startWakefulService(this, i);
+            MyReceiver.startWakefulService(this, i);  */
         } else if (id == R.id.action_get_params) {
             get_parameters();
         } else if (id == R.id.action_get_bills) {

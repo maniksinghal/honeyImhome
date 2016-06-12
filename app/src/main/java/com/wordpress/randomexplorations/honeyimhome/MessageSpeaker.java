@@ -39,6 +39,7 @@ public class MessageSpeaker extends UtteranceProgressListener implements
     public boolean ready = false;
     private boolean waiting_for_tts = false;
     private boolean waiting_for_sco = false;
+    private boolean use_phone_speaker_during_sco = false;
 
     public static final String TRACK_UTTERANCE_ID = "com.wordpress.randomexplorations.honeyimhome.utterance_id";
     public static final String NOTRACK_UTTERANCE_ID = "com.wordpress.randomexplorations.honeyimhome.no_track_utterance_id";
@@ -132,8 +133,10 @@ public class MessageSpeaker extends UtteranceProgressListener implements
                             } else {
                                 // SCO started on our request
                                 int mode;
-                                am.setMode(AudioManager.MODE_IN_COMMUNICATION);
-                                am.setSpeakerphoneOn(false);
+                                if (!use_phone_speaker_during_sco) {
+                                    am.setMode(AudioManager.MODE_IN_COMMUNICATION);
+                                    am.setSpeakerphoneOn(false);
+                                }
 
                                 // Check if mode setting worked
                                 mode = am.getMode();
@@ -258,21 +261,12 @@ public class MessageSpeaker extends UtteranceProgressListener implements
         }
     }
 
-    public void speak(String message) {
-        if (ready) {
-            Log.d("this", "TTS: Speaking: " + message);
-            tts.speak(message, TextToSpeech.QUEUE_ADD, tts_parameters, MessageSpeaker.TRACK_UTTERANCE_ID);
-        } else {
-            Log.d("this", "ERROR: MessageSpeaker: TTS not ready");
-            jarvis.cleanupIntent();
-        }
-    }
-
-    public void speak(List<String> list, int pause_interval_ms) {
+    public void speak(List<String> list, int pause_interval_ms, float speech_rate) {
         if (ready) {
             int size = list.size();
             String utter_id = MessageSpeaker.NOTRACK_UTTERANCE_ID;
-            Log.d("this", "MessageSpeaker: Playing list of " + size + " items with pause interval: " + pause_interval_ms);
+            Log.d("this", "MessageSpeaker: Playing list of " + size + " items with pause interval: " + pause_interval_ms + " and speech-rate: " + speech_rate);
+            tts.setSpeechRate(speech_rate);
             for (int i = 0; i < size; i++) {
                 if (i > 0 && pause_interval_ms > 0) {
                     // Not the first message
@@ -327,8 +321,11 @@ public class MessageSpeaker extends UtteranceProgressListener implements
             if (conn_attempt_started && am.isBluetoothScoOn()) {
                 am.stopBluetoothSco();
             }
-            am.setMode(AudioManager.MODE_NORMAL);
-            am.setSpeakerphoneOn(true);
+
+            if (!use_phone_speaker_during_sco) {
+                am.setMode(AudioManager.MODE_NORMAL);
+                am.setSpeakerphoneOn(true);
+            }
         }
     }
 
@@ -344,7 +341,9 @@ public class MessageSpeaker extends UtteranceProgressListener implements
     }
 
 
-    public void initialize(boolean use_sco) {
+    public void initialize(boolean use_sco, boolean use_phone_speaker) {
+
+        use_phone_speaker_during_sco = use_phone_speaker;
 
         /*
         * TTS initialization takes time as compared to SCO
