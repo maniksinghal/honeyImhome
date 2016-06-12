@@ -21,6 +21,7 @@
     <string name="weather_woeid">woeid</string>
     <string name="current_weather">current_weather</string>
     <string name="battery_charging_state">battery_charging_state</string>
+    <string name="battery_level_state">battery_level_state</string>
     <string name="office_wifi">office-wifi</string>
     <string name="home_wifi">home-wifi</string>
     <string name="reminder_tone">reminder tone</string>

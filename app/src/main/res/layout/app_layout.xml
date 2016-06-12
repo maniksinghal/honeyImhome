@@ -29,6 +29,15 @@
         android:src="@drawable/weather"
         android:gravity="center_horizontal"
         android:padding="5dip"/>
+        <ImageView
+            android:id="@+id/battery_icon"
+            android:layout_height="30dip"
+            android:layout_width="30dip"
+            android:scaleType="centerCrop"
+            android:src="@drawable/battery_ok"
+            android:gravity="center_horizontal"
+            android:layout_alignParentEnd="true"
+            android:padding="5dip"/>
 
         <!--
         <ImageView

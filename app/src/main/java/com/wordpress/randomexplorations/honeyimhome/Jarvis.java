@@ -1021,6 +1021,20 @@ public class Jarvis extends IntentService {
 
     }
 
+    private void handle_battery_level_change(boolean is_okay) {
+        SharedPreferences prefs =
+                PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        SharedPreferences.Editor edit = prefs.edit();
+
+        Log.d("this", "Battery state of phone changed (okay?): " + is_okay);
+
+        edit.putBoolean(getString(R.string.battery_level_state), is_okay);
+        edit.commit();
+
+        sync_main_activity(false);
+
+    }
+
 
     private void process_hubbys_message() {
         String message = null;
@@ -1202,6 +1216,12 @@ public class Jarvis extends IntentService {
             case MyReceiver.EXTRA_PURPOSE_POWER_STATE_CHANGED:
                 boolean power_state = runningIntent.getBooleanExtra(MyReceiver.EXTRA_VALUE, false);
                 handle_power_state_change(power_state);
+                cleanupIntent();
+                break;
+
+            case MyReceiver.EXTRA_PURPOSE_BATTERY_LEVEL_CHANGED:
+                boolean is_okay = runningIntent.getBooleanExtra(MyReceiver.EXTRA_VALUE, false);
+                handle_battery_level_change(is_okay);
                 cleanupIntent();
                 break;
 

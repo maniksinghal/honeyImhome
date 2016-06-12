@@ -76,6 +76,7 @@ public class MyReceiver extends WakefulBroadcastReceiver {
     public static final int EXTRA_PURPOSE_POWER_STATE_CHANGED = 13;
     public static final int EXTRA_PURPOSE_SYNC_MAIN_ACTIVITY = 14;
     public static final int EXTRA_PURPOSE_POKE_ACTIVITY_BACK = 15;
+    public static final int EXTRA_PURPOSE_BATTERY_LEVEL_CHANGED = 16;
 
     public static final String AM_IN_CAR = "com.wordpress.randomexplorations.honeyimhome.am_in_car";
 
@@ -115,8 +116,20 @@ public class MyReceiver extends WakefulBroadcastReceiver {
             handle_power_state_change(context, true);
         } else if (Intent.ACTION_POWER_DISCONNECTED.equals(action)) {
             handle_power_state_change(context, false);
+        } else if (Intent.ACTION_BATTERY_LOW.equals(action)) {
+            handle_battery_level_change(context, false);
+        } else if (Intent.ACTION_BATTERY_OKAY.equals(action)) {
+            handle_battery_level_change(context, true);
         }
 
+    }
+
+    private void handle_battery_level_change(Context context, boolean is_okay) {
+        Intent i = new Intent(context, Jarvis.class);
+        i.putExtra(EXTRA_PURPOSE, EXTRA_PURPOSE_BATTERY_LEVEL_CHANGED);
+        i.putExtra(EXTRA_VALUE, is_okay);
+        Log.d("this", "Broadcast received for battery level (okay?): " + is_okay);
+        startWakefulService(context, i);
     }
 
     private void handle_power_state_change(Context context, boolean power_state) {

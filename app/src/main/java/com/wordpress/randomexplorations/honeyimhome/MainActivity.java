@@ -3,11 +3,13 @@ package com.wordpress.randomexplorations.honeyimhome;
 import android.app.IntentService;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.shapes.Shape;
 import android.media.AudioManager;
+import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
@@ -85,16 +87,59 @@ public class MainActivity extends ActionBarActivity {
       }
     };
 
+
+    private float getBatteryLevel() {
+        Intent batteryIntent = registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+        int level = batteryIntent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+        int scale = batteryIntent.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+
+        // Error checking that probably isn't needed but I added just in case.
+        if(level == -1 || scale == -1) {
+            return 50.0f;
+        }
+
+        return ((float)level / (float)scale) * 100.0f;
+    }
+
+
     private void update_ui() {
+        boolean battery_ok = false;
         LinearLayout li = (LinearLayout)findViewById(R.id.main_layout);
         Button bt = (Button)findViewById(R.id.GoButton);
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         String layout_color = null;
+        ImageView battery_icon = (ImageView)findViewById(R.id.battery_icon);
 
 
         connected_to_car = prefs.getBoolean(MyReceiver.AM_IN_CAR, false);
         is_phone_charging = prefs.getBoolean(getString(R.string.battery_charging_state), false);
         user_notification = prefs.getString(getString(R.string.intentSummary), null);
+
+
+        battery_ok = prefs.getBoolean(getString(R.string.battery_level_state), true);
+
+        /*
+        * There could be instances where phone died out of battery drain
+        * - then put into charging
+        * - battery state became good again
+        * - then user powered it ON
+        * - It read stale (low) value from shared preferences as battery ok state intent did not fire
+         */
+        float battery_level = getBatteryLevel();
+        if (battery_level >= 35 && !battery_ok) {   // battery >35%, assume good
+            SharedPreferences.Editor edit = prefs.edit();
+            edit.putBoolean(getString(R.string.battery_level_state), true);
+            edit.commit();
+            Log.d("this", "Overriding battery state to ok");
+            battery_ok = true;
+        }
+
+        Log.d("this", "Battery state (ok?): " + battery_ok);
+        if (battery_ok) {
+            battery_icon.setImageResource(R.drawable.battery_ok);
+        } else {
+            battery_icon.setImageResource(R.drawable.battery_low);
+        }
 
         TextView tv = (TextView)findViewById(R.id.google_label);
         tv.setVisibility(View.GONE);
@@ -131,7 +176,7 @@ public class MainActivity extends ActionBarActivity {
         bt.setBackground(gd);
         bt.setTextColor(color);
 
-        if (is_phone_charging && connected_to_car) {
+        if (connected_to_car) {
             // Keep screen always ON
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         } else {
@@ -717,7 +762,7 @@ public class MainActivity extends ActionBarActivity {
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
-        
+
         SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(this);
 
         //noinspection SimplifiableIfStatement
