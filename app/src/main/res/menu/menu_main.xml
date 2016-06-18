@@ -6,15 +6,19 @@
     <item android:id="@+id/action_test" android:title="Speak test message" />
     <!--
     <item android:id="@+id/action_start_sco" android:title="Start SCO" />
-    -->
-    <item android:id="@+id/action_fetch_weather" android:title="Fetch Weather" />
     <item android:id="@+id/action_time_to_office" android:title="Fetch time to office" />
+    <item android:id="@+id/action_start_SR" android:title="Start speech recognition" />
+    <item android:id="@+id/action_fetch_weather" android:title="Fetch Weather" />
+    -->
+
+
     <!--
     <item android:id="@+id/action_fetch_news" android:title="Fetch News" />
     -->
     <item android:id="@+id/action_get_params" android:title="Get params" />
     <item android:id="@+id/action_get_bills" android:title="Bill payment details" />
-    <item android:id="@+id/action_start_SR" android:title="Start speech recognition" />
-    <item android:id="@+id/clear_logging" android:title="Clear logs" />
-    <item android:id="@+id/show_logging" android:title="Show logs" />
+
+    <item android:id="@+id/clear_saved_logs" android:title="Clear saved logs" />
+    <item android:id="@+id/show_logging" android:title="Show current logs" />
+    <item android:id="@+id/show_saved_logging" android:title="Show saved logs" />
 </menu>

@@ -42,6 +42,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 import android.text.method.ScrollingMovementMethod;
+import android.widget.Toast;
 
 
 public class MainActivity extends ActionBarActivity {
@@ -109,12 +110,20 @@ public class MainActivity extends ActionBarActivity {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         String layout_color = null;
         ImageView battery_icon = (ImageView)findViewById(R.id.battery_icon);
+        String saved_logs = null;
+        ImageView savedLogsView = (ImageView)findViewById(R.id.save_logs_icon);
 
 
         connected_to_car = prefs.getBoolean(MyReceiver.AM_IN_CAR, false);
         is_phone_charging = prefs.getBoolean(getString(R.string.battery_charging_state), false);
         user_notification = prefs.getString(getString(R.string.intentSummary), null);
+        saved_logs = prefs.getString(getString(R.string.saved_logs), null);
 
+        if (saved_logs == null) {
+            savedLogsView.setImageResource(R.drawable.save_logs_empty_icon);
+        } else {
+            savedLogsView.setImageResource(R.drawable.save_logs_icon);
+        }
 
         battery_ok = prefs.getBoolean(getString(R.string.battery_level_state), true);
 
@@ -289,8 +298,25 @@ public class MainActivity extends ActionBarActivity {
 
         super.onResume();
 
+        Log.d("this", "Resuming Main activity");
         startWeatherUpdate();
         update_ui();
+    }
+
+    public void onBackPressed() {
+        // Use back-button to clear text-view
+        TextView tv = (TextView)findViewById(R.id.hello_world);
+        String logs = tv.getText().toString();
+        if (logs != null && logs.length() > 0) {
+            tv.setText(null);
+        } else {
+            super.onBackPressed();
+        }
+    }
+
+    protected void onPause() {
+        super.onPause();
+        Log.d("this", "Pausing main activity");
     }
 
 
@@ -338,6 +364,14 @@ public class MainActivity extends ActionBarActivity {
                 MyReceiver.startWakefulService(getApplicationContext(), i);
             }
         });
+
+        ImageView saveLogs = (ImageView)findViewById(R.id.save_logs_icon);
+        saveLogs.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View view) {
+                save_logs();
+            }
+        });
+
 
         Button bt = (Button)findViewById(R.id.GoButton);
         /*bt.setOnClickListener(new Button.OnClickListener() {
@@ -708,6 +742,13 @@ public class MainActivity extends ActionBarActivity {
         message += "Is phone charging: " +
                  prefs.getBoolean(getString(R.string.battery_charging_state), false) + "\n";
 
+        String logs = prefs.getString(getString(R.string.saved_logs), null);
+        if (logs == null) {
+            message += "Saved logs: <Not Present>\n";
+        } else {
+            message += "Saved logs: <Present>\n";
+        }
+
 
 
 
@@ -724,7 +765,9 @@ public class MainActivity extends ActionBarActivity {
         return;
     }
 
-    private void clear_logging() {
+    private void clear_saved_logs() {
+
+
         try {
             new ProcessBuilder()
                     .command("logcat", "-c")
@@ -734,11 +777,16 @@ public class MainActivity extends ActionBarActivity {
             e.printStackTrace();
         }
 
-        TextView tv = (TextView)findViewById(R.id.hello_world);
-        tv.setText("");
+
+        SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(this);
+        SharedPreferences.Editor edit = pref.edit();
+        edit.putString(getString(R.string.saved_logs), null);
+        edit.commit();
+
+        update_ui();
     }
 
-    private void show_logging() {
+    private String get_logging() {
         try {
             Process process = Runtime.getRuntime().exec("logcat -d");
             BufferedReader bufferedReader = new BufferedReader(
@@ -750,10 +798,53 @@ public class MainActivity extends ActionBarActivity {
                 line += "\n";
                 log.append(line);
             }
-            TextView tv = (TextView)findViewById(R.id.hello_world);
-            tv.setText(log.toString());
+            return log.toString();
         }
         catch (Exception e) {}
+        return null;
+    }
+
+    private void show_logging() {
+        String logs = get_logging();
+        TextView tv = (TextView)findViewById(R.id.hello_world);
+        if (logs != null) {
+            tv.setText(logs);
+        }
+    }
+
+    private void save_logs() {
+        SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(this);
+        SharedPreferences.Editor edit = pref.edit();
+        String cur_logs = pref.getString(getString(R.string.saved_logs), null);
+        String new_logs = get_logging();
+
+        if (new_logs != null) {
+            if (cur_logs == null) {
+                edit.putString(getString(R.string.saved_logs), new_logs);
+            } else {
+                cur_logs += "\n----- Adding New Logs entry -----\n";
+                cur_logs += new_logs;
+                edit.putString(getString(R.string.saved_logs), cur_logs);
+            }
+            edit.commit();
+
+            if (cur_logs == null) {
+                update_ui();
+            }
+
+
+            Toast toast = Toast.makeText(this, "Saved session logs", Toast.LENGTH_SHORT);
+            toast.show();
+        }
+    }
+
+    private void show_saved_logging() {
+        SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(this);
+        String logs = pref.getString(getString(R.string.saved_logs), null);
+        if (logs != null) {
+            TextView tv = (TextView)findViewById(R.id.hello_world);
+            tv.setText(logs);
+        }
     }
 
     @Override
@@ -787,12 +878,13 @@ public class MainActivity extends ActionBarActivity {
             i.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_START_SCO);
             i.putExtra(MyReceiver.EXTRA_FORCE_PLAY, true);
             MyReceiver.startWakefulService(this, i);
-            */
+
         } else if (id == R.id.action_fetch_weather) {
             Intent i = new Intent(this, Jarvis.class);
             i.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_FETCH_WEATHER);
             i.putExtra(MyReceiver.EXTRA_FORCE_PLAY, true);
             MyReceiver.startWakefulService(this, i);
+
         } else if (id == R.id.action_time_to_office) {
             Intent i = new Intent(this, Jarvis.class);
             String orig = pref.getString(getString(R.string.home_loc), null);
@@ -806,22 +898,25 @@ public class MainActivity extends ActionBarActivity {
             i.putExtra(MyReceiver.EXTRA_ORIG_LOCATION, orig);
             i.putExtra(MyReceiver.EXTRA_FORCE_PLAY, true);
             MyReceiver.startWakefulService(this, i);
-            /*
+
         } else if (id == R.id.action_fetch_news) {
             Intent i = new Intent(this, Jarvis.class);
             i.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_FETCH_NEWS);
             i.putExtra(MyReceiver.EXTRA_FORCE_PLAY, true);
-            MyReceiver.startWakefulService(this, i);  */
+            MyReceiver.startWakefulService(this, i);
+        } else if (id == R.id.action_start_SR) {
+            command_speech_recognition(false);
+            */
         } else if (id == R.id.action_get_params) {
             get_parameters();
         } else if (id == R.id.action_get_bills) {
             get_bill_payments();
-        } else if (id == R.id.action_start_SR) {
-            command_speech_recognition(false);
-        } else if (id == R.id.clear_logging) {
-            clear_logging();
+        } else if (id == R.id.clear_saved_logs) {
+            clear_saved_logs();
         } else if (id == R.id.show_logging) {
             show_logging();
+        } else if (id == R.id.show_saved_logging) {
+            show_saved_logging();
         }
 
 

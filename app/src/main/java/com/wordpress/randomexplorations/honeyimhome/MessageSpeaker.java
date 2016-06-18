@@ -273,11 +273,27 @@ public class MessageSpeaker extends UtteranceProgressListener implements
                     tts.playSilentUtterance(pause_interval_ms, TextToSpeech.QUEUE_ADD, utter_id);
                 }
 
-                if (i == size-1) {
-                    // This is going to be the last string
-                    utter_id = MessageSpeaker.TRACK_UTTERANCE_ID;
+                // Split paragraph to list of sentences separated by a small utterance
+                // "XXX. YYY" => XXX and YYY
+                String message = list.get(i);
+                String[] sentences = message.split("\\. ");
+                Log.d("this", "Speaking: " + message);
+                int num_sentences = sentences.length;
+                for (int j = 0; j < num_sentences; j++) {
+                    message = sentences[j];
+
+                    if (i == (size-1) && j == (num_sentences - 1)) {
+                        utter_id = MessageSpeaker.TRACK_UTTERANCE_ID;
+                    }
+
+                    tts.speak(message, TextToSpeech.QUEUE_ADD, tts_parameters, utter_id);
+
+                    if (j < (num_sentences - 1)) {
+                        // Another sentence following in paragraph
+                        tts.playSilentUtterance(500, TextToSpeech.QUEUE_ADD, utter_id);  // 500ms pause b/w sentences
+                    }
+
                 }
-                tts.speak(list.get(i), TextToSpeech.QUEUE_ADD, tts_parameters, utter_id);
             }
         } else {
             Log.d("this", "ERROR: MessageSpeaker: TTS not ready");

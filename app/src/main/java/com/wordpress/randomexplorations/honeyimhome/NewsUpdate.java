@@ -101,10 +101,6 @@ public class NewsUpdate extends AsyncTask<URL, Void, Void> {
                         if (desc.contains("http")) {
                             // Description is not textual, but a link, ignore it
                         } else {
-                            /*
-                            // TTS does not pause well on a period, but on comma its ok
-                            desc = desc.replace(". ", ", ");
-                            */
                             news.add(desc);
                         }
                     } else if (next_event == XmlPullParser.END_TAG) {

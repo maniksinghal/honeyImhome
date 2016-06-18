@@ -29,6 +29,8 @@
         android:src="@drawable/weather"
         android:gravity="center_horizontal"
         android:padding="5dip"/>
+
+        <!-- BATTERY ICON -->
         <ImageView
             android:id="@+id/battery_icon"
             android:layout_height="30dip"
@@ -38,6 +40,19 @@
             android:gravity="center_horizontal"
             android:layout_alignParentEnd="true"
             android:padding="5dip"/>
+
+        <!-- SAVE LOGS ICON -->
+        <ImageView
+            android:id="@+id/save_logs_icon"
+            android:layout_height="30dip"
+            android:layout_width="30dip"
+            android:scaleType="centerCrop"
+            android:src="@drawable/save_logs_icon"
+            android:layout_below="@id/battery_icon"
+            android:gravity="center_horizontal"
+            android:clickable="true"
+            android:layout_alignParentEnd="true"
+            android:layout_marginTop="20dip"/>
 
         <!--
         <ImageView
@@ -99,17 +114,21 @@
             android:textStyle="bold|italic"
             />
 
+        <!-- NEWS ICON -->
         <ImageView
             android:id="@+id/news_icon"
             android:layout_height="65dip"
             android:layout_width="65dip"
             android:scaleType="centerCrop"
-            android:src="@drawable/news"
+            android:src="@drawable/news2"
             android:gravity="center_horizontal"
             android:padding="5dip"
             android:layout_above="@id/notification"
             android:clickable="true"
             android:layout_marginLeft="20dip"/>
+
+
+
 
     </RelativeLayout>
 
