@@ -14,6 +14,7 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.os.PowerManager;
 import android.preference.PreferenceManager;
 import android.speech.RecognitionListener;
 import android.speech.SpeechRecognizer;
@@ -61,6 +62,7 @@ public class MainActivity extends ActionBarActivity {
     private String user_notification = null;
     private boolean is_listening = false;
     private boolean is_ready_for_speech = false;
+
 
     //Communication between main UI thread and timer threads
     private int speech_timer_seq_num = 0;
@@ -118,6 +120,7 @@ public class MainActivity extends ActionBarActivity {
         is_phone_charging = prefs.getBoolean(getString(R.string.battery_charging_state), false);
         user_notification = prefs.getString(getString(R.string.intentSummary), null);
         saved_logs = prefs.getString(getString(R.string.saved_logs), null);
+        Boolean speech_running = prefs.getBoolean(getString(R.string.speech_running), false);
 
         if (saved_logs == null) {
             savedLogsView.setImageResource(R.drawable.save_logs_empty_icon);
@@ -166,7 +169,9 @@ public class MainActivity extends ActionBarActivity {
         gd.setShape(GradientDrawable.OVAL);
         int color = 0;
 
-        if (connected_to_car) {
+        if (speech_running) {
+            color = Color.parseColor("#FF0000");
+        } else if (connected_to_car) {
             // Activate the background color
             color = Color.parseColor(getString(R.string.button_color_connected));
         } else {
@@ -174,7 +179,10 @@ public class MainActivity extends ActionBarActivity {
         }
         gd.setStroke(3, color);
 
-        if (is_listening) {
+        if (speech_running) {
+            bt.setText("X");
+            bt.setEnabled(true);
+        } else if (is_listening) {
             bt.setText("...");
             bt.setEnabled(false);
         } else {
@@ -185,9 +193,27 @@ public class MainActivity extends ActionBarActivity {
         bt.setBackground(gd);
         bt.setTextColor(color);
 
+        PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
         if (connected_to_car) {
+
+            // If screen is not currently ON, switch it ON
+            // Take a wake-lock to switch it ON.
+            PowerManager.WakeLock wake_lock = null;
+            if (!pm.isInteractive()) {
+                int flags = PowerManager.SCREEN_BRIGHT_WAKE_LOCK|
+                        PowerManager.ACQUIRE_CAUSES_WAKEUP|
+                        PowerManager.ON_AFTER_RELEASE;   // do we really need ON_AFTER_RELEASE??
+                wake_lock = pm.newWakeLock(flags, "My Tag");
+                wake_lock.acquire();
+            }
             // Keep screen always ON
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+            // Now we can release the lock (FLAG_KEEP_SCREEN_ON should keep the screen ON)
+            if (wake_lock != null) {
+                wake_lock.release();
+            }
+
         } else {
             getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         }
@@ -748,6 +774,8 @@ public class MainActivity extends ActionBarActivity {
         } else {
             message += "Saved logs: <Present>\n";
         }
+
+        message += "Speech Running: " + prefs.getBoolean(getString(R.string.speech_running), false) + "\n";
 
 
 

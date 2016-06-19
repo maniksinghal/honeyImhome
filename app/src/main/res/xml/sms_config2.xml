@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <all>
-    <Sender name=".*C[iI][tT][iI][bB][kK].*">
+    <Sender name=".*[Cc][iI][tT][iI][bB][kK].*">
         <message text=".*BSNL.*23681442.*has been processed successfully.*">
             <transaction type="bsnl_bill"/>
             <log text="BSNL bill payment last made on #DATE"/>

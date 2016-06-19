@@ -366,6 +366,16 @@ public class Jarvis extends IntentService {
         if (runningIntent != null) {
             // Cleanup runningIntent
 
+            int purpose = runningIntent.getIntExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_INVALID);
+            if (purpose == MyReceiver.EXTRA_PURPOSE_MESSAGE_TO_PLAY) {
+                // Set speech not running and notify Main activity
+                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+                SharedPreferences.Editor editor = prefs.edit();
+                editor.putBoolean(getString(R.string.speech_running), false);
+                editor.commit();
+                sync_main_activity(false);
+            }
+
             if (!runningIntent.getBooleanExtra(MyReceiver.EXTRA_NON_WAKEFUL, false)) {
                 MyReceiver.completeWakefulIntent(runningIntent);
             }
@@ -697,6 +707,7 @@ public class Jarvis extends IntentService {
     private void play_message(ArrayList<String> list, int interval_ms) {
         String message = list.get(0);
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        SharedPreferences.Editor edit = prefs.edit();
         Boolean use_sco = prefs.getBoolean(getString(R.string.bluetooth_sco), false);
         Boolean use_phone_speaker = prefs.getBoolean(getString(R.string.prefer_phone_speaker_during_sco), false);
 
@@ -722,6 +733,11 @@ public class Jarvis extends IntentService {
 
         float default_speech_rate = Float.parseFloat(prefs.getString(getString(R.string.default_speech_rate), "1.0"));
         float speech_rate = runningIntent.getFloatExtra(MyReceiver.EXTRA_SPEECH_RATE, default_speech_rate);
+
+        // Now we are going to speak, inform the Main activity
+        edit.putBoolean(getString(R.string.speech_running), true);
+        edit.commit();
+        sync_main_activity(false);
         speaker.speak(list, interval_ms, speech_rate);
     }
 
