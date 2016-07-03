@@ -335,6 +335,14 @@ public class Jarvis extends IntentService {
 
         }
 
+        /*
+        * User request to abort running speech
+         */
+        if (purpose == MyReceiver.EXTRA_PURPOSE_STOP_RUNNING_SPEECH) {
+            // @todo: COMPLETE THIS, speaker has implemented a stop API
+            // Take care of intents in queue when the current intent is stopped.
+        }
+
 
 
         workList.add(intent);
@@ -1063,6 +1071,7 @@ public class Jarvis extends IntentService {
                 * intent, and enqueue a new intent for playing the message.
                 */
             message = runningIntent.getStringExtra(MyReceiver.EXTRA_VALUE);
+            setIntentSummary(message, false);
             Intent i = new Intent();
             i.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_MESSAGE_TO_PLAY);
             i.putExtra(MyReceiver.EXTRA_VALUE, message);

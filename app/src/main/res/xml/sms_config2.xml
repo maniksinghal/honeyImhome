@@ -17,6 +17,10 @@
             <transaction type="my_airtel_bill"/>
             <log text="My Airtel bill payment last made on #DATE"/>
         </message>
+        <message text=".*AIRTEL.*BROADB.*processed.*">
+            <transaction type="airtel_broadband_bill"/>
+            <log text="My Airtel broadband payment last made on #DATE"/>
+        </message>
         <message text=".*RADHA RANI.*was accepted.*">
             <transaction type="house_rent"/>
             <log text="House Rent last paid on #DATE"/>

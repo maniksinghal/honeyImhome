@@ -1,5 +1,6 @@
 package com.wordpress.randomexplorations.honeyimhome;
 
+import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -77,6 +78,7 @@ public class MyReceiver extends WakefulBroadcastReceiver {
     public static final int EXTRA_PURPOSE_SYNC_MAIN_ACTIVITY = 14;
     public static final int EXTRA_PURPOSE_POKE_ACTIVITY_BACK = 15;
     public static final int EXTRA_PURPOSE_BATTERY_LEVEL_CHANGED = 16;
+    public static final int EXTRA_PURPOSE_STOP_RUNNING_SPEECH = 17;
 
     public static final String AM_IN_CAR = "com.wordpress.randomexplorations.honeyimhome.am_in_car";
 
@@ -120,6 +122,8 @@ public class MyReceiver extends WakefulBroadcastReceiver {
             handle_battery_level_change(context, false);
         } else if (Intent.ACTION_BATTERY_OKAY.equals(action)) {
             handle_battery_level_change(context, true);
+        } else if (BluetoothAdapter.ACTION_STATE_CHANGED.equals(action)) {
+            handle_bluetooth_state_change(context, intent, prefs);
         }
 
     }
@@ -257,7 +261,7 @@ public class MyReceiver extends WakefulBroadcastReceiver {
         if (hubby == null) {
             message_to_play = "Received message";
         } else {
-            message_to_play = hubby + " says";
+            message_to_play = hubby + " says: ";
         }
 
         message_to_play += " " + message;
@@ -269,6 +273,21 @@ public class MyReceiver extends WakefulBroadcastReceiver {
         startWakefulService(context, i);
 
         return;
+    }
+
+    private void handle_bluetooth_state_change(Context context, Intent intent, SharedPreferences prefs) {
+        int state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1);
+        if (state == BluetoothAdapter.STATE_OFF) {
+            // Bluetooth disable event, treat as car-disconnect for now
+            Log.d("this", "Bluetooth disconnect, treating as car-disconnect");
+            SharedPreferences.Editor ed = prefs.edit();
+            ed.putBoolean(AM_IN_CAR, false);
+            ed.commit();
+
+            Intent in = new Intent(context, Jarvis.class);
+            in.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_CAR_DISCONNECT);
+            startWakefulService(context, in);
+        }
     }
 
     private void handle_bluetooth_actions(Context context, Intent intent, SharedPreferences prefs) {

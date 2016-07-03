@@ -49,6 +49,15 @@ public class MessageSpeaker extends UtteranceProgressListener implements
         context = ctx;
     }
 
+    public void stop() {
+        if (ready) {
+            if (tts.isSpeaking()) {
+                tts.stop();
+            }
+            shutdown();
+        }
+    }
+
     /*
     * Timer to stop waiting-for-sco state and
     * continue processing the intentQueue
