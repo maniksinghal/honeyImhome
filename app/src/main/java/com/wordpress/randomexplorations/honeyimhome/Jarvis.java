@@ -596,6 +596,18 @@ public class Jarvis extends IntentService {
             Long minutes_diff = (end_time - start_time) / (1000 *60);
             show_reminder("Ride time today: " + minutes_diff + " minutes.", null);
 
+            // Broadcast an intent to PersonalAnalytics service for my ride time
+            Intent in = new Intent();
+
+            // Hardcoded schema values from PersonalAnalytics :(
+            // @todo: find a better way
+            in.setAction("com.wordpress.randomexplorations.personalanalytics.UPDATE_EVENT");
+            in.putExtra("source", "jarvis");
+            in.putExtra("type", "ride_time");
+            in.putExtra("start_time", start_time);
+            in.putExtra("end_time", end_time);
+            sendBroadcast(in);
+
         }
     }
 

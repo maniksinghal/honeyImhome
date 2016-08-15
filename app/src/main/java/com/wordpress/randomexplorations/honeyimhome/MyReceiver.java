@@ -278,15 +278,17 @@ public class MyReceiver extends WakefulBroadcastReceiver {
     private void handle_bluetooth_state_change(Context context, Intent intent, SharedPreferences prefs) {
         int state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1);
         if (state == BluetoothAdapter.STATE_OFF) {
-            // Bluetooth disable event, treat as car-disconnect for now
-            Log.d("this", "Bluetooth disconnect, treating as car-disconnect");
+            // Bluetooth disable event
+            Log.d("this", "Bluetooth disconnect");
             SharedPreferences.Editor ed = prefs.edit();
-            ed.putBoolean(AM_IN_CAR, false);
-            ed.commit();
+            if (prefs.getBoolean(AM_IN_CAR, false) == true) {
+                ed.putBoolean(AM_IN_CAR, false);
+                ed.commit();
 
-            Intent in = new Intent(context, Jarvis.class);
-            in.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_CAR_DISCONNECT);
-            startWakefulService(context, in);
+                Intent in = new Intent(context, Jarvis.class);
+                in.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_CAR_DISCONNECT);
+                startWakefulService(context, in);
+            }
         }
     }
 
