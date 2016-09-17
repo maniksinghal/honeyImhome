@@ -151,10 +151,14 @@ public class Jarvis extends IntentService {
         Calendar date = Calendar.getInstance();
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
 
-        Uri notification = Uri.parse(prefs.getString(getString(R.string.reminder_tone), null));
+        String reminder_tone = null;
+        String reminder;
+        Uri notification = null;
+        reminder_tone = prefs.getString(getString(R.string.reminder_tone), null);
 
-
-        String reminder = null;
+        if (reminder_tone != null) {
+            notification = Uri.parse(reminder_tone);
+        }
 
         // Monday morning reminders
         if (date.get(Calendar.DAY_OF_WEEK) == Calendar.MONDAY && !wifi_connected) {

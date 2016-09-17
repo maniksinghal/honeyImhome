@@ -196,6 +196,7 @@ public class MainActivity extends ActionBarActivity {
         PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
         if (connected_to_car) {
 
+            /*
             // If screen is not currently ON, switch it ON
             // Take a wake-lock to switch it ON.
             PowerManager.WakeLock wake_lock = null;
@@ -206,16 +207,23 @@ public class MainActivity extends ActionBarActivity {
                 wake_lock = pm.newWakeLock(flags, "My Tag");
                 wake_lock.acquire();
             }
-            // Keep screen always ON
-            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            */
 
+            // Keep screen always ON
+            //getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED | WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD | WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON | WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
+            //getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED | WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD | WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON | WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON | WindowManager.LayoutParams.FLAG_ALLOW_LOCK_WHILE_SCREEN_ON);
+
+
+            /*
             // Now we can release the lock (FLAG_KEEP_SCREEN_ON should keep the screen ON)
             if (wake_lock != null) {
                 wake_lock.release();
             }
+            */
 
         } else {
-            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED | WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD | WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON | WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
         }
 
         tv = (TextView)findViewById(R.id.notification);
@@ -324,6 +332,11 @@ public class MainActivity extends ActionBarActivity {
 
         super.onResume();
 
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        SharedPreferences.Editor edit = prefs.edit();
+        edit.putBoolean(getString(R.string.ui_running), true);
+        edit.commit();
+
         Log.d("this", "Resuming Main activity");
         startWeatherUpdate();
         update_ui();
@@ -342,6 +355,13 @@ public class MainActivity extends ActionBarActivity {
 
     protected void onPause() {
         super.onPause();
+
+
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        SharedPreferences.Editor edit = prefs.edit();
+        edit.putBoolean(getString(R.string.ui_running), false);
+        edit.commit();
+
         Log.d("this", "Pausing main activity");
     }
 
@@ -356,13 +376,10 @@ public class MainActivity extends ActionBarActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-        SharedPreferences.Editor edit = prefs.edit();
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.app_layout);
 
-        edit.putBoolean(getString(R.string.ui_running), true);
-        edit.commit();
 
         String assistant = prefs.getString(getString(R.string.voice_assistant), "???");
         getSupportActionBar().setTitle(assistant);
