@@ -21,4 +21,5 @@
     <item android:id="@+id/clear_saved_logs" android:title="Clear saved logs" />
     <item android:id="@+id/show_logging" android:title="Show current logs" />
     <item android:id="@+id/show_saved_logging" android:title="Show saved logs" />
+    <item android:id="@+id/refresh_device" android:title="Refresh Smartome socket" />
 </menu>

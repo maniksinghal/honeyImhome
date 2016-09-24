@@ -9,6 +9,7 @@ import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.shapes.Shape;
 import android.media.AudioManager;
+import android.os.AsyncTask;
 import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Handler;
@@ -195,32 +196,9 @@ public class MainActivity extends ActionBarActivity {
 
         PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
         if (connected_to_car) {
-
-            /*
-            // If screen is not currently ON, switch it ON
-            // Take a wake-lock to switch it ON.
-            PowerManager.WakeLock wake_lock = null;
-            if (!pm.isInteractive()) {
-                int flags = PowerManager.SCREEN_BRIGHT_WAKE_LOCK|
-                        PowerManager.ACQUIRE_CAUSES_WAKEUP|
-                        PowerManager.ON_AFTER_RELEASE;   // do we really need ON_AFTER_RELEASE??
-                wake_lock = pm.newWakeLock(flags, "My Tag");
-                wake_lock.acquire();
-            }
-            */
-
             // Keep screen always ON
-            //getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED | WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD | WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON | WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
             //getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED | WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD | WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON | WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON | WindowManager.LayoutParams.FLAG_ALLOW_LOCK_WHILE_SCREEN_ON);
-
-
-            /*
-            // Now we can release the lock (FLAG_KEEP_SCREEN_ON should keep the screen ON)
-            if (wake_lock != null) {
-                wake_lock.release();
-            }
-            */
 
         } else {
             getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED | WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD | WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON | WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
@@ -513,6 +491,38 @@ public class MainActivity extends ActionBarActivity {
     }
 
 
+    /*
+    * @todo: THIS IS A TEMPORARY TASK TO TEST smartomeSocket
+    * Needs to be moved to proper place
+     */
+    private class deviceRefresher extends AsyncTask<iotDevice, Void, Boolean> {
+
+        private iotDevice dev;
+
+        protected Boolean doInBackground(iotDevice... devs) {
+            dev = devs[0];
+
+            int result = dev.refresh_status();
+            if (result == iotDevice.IOT_DEVICE_STATUS_AVAILABLE) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+        protected void onPostExecute(Boolean result) {
+
+            TextView tv = (TextView)findViewById(R.id.hello_world);
+
+            if (result) {
+                tv.setText("Device is available");
+            } else {
+                tv.setText("Device is not available");
+            }
+
+        }
+
+    }
 
 
     private class MyRecognitionListener implements RecognitionListener {
@@ -892,6 +902,11 @@ public class MainActivity extends ActionBarActivity {
         }
     }
 
+    private void refresh_smartome_device() {
+        smartomeSocket dev = new smartomeSocket("HD1-12903-043c", "192.168.1.7");
+        new deviceRefresher().execute(dev);
+    }
+
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         // Handle action bar item clicks here. The action bar will
@@ -962,6 +977,8 @@ public class MainActivity extends ActionBarActivity {
             show_logging();
         } else if (id == R.id.show_saved_logging) {
             show_saved_logging();
+        } else if (id == R.id.refresh_device) {
+            refresh_smartome_device();
         }
 
 
