@@ -27,8 +27,8 @@
         <action name="VOCI_SMS_TO_HUBBY"></action>
         <match>.*tell her(.*)</match>
         <match>.*ask her(.*)</match>
-        <match>.*tell my wife(.*)</match>
-        <match>.*ask my wife(.*)</match>
+        <match>.*tell [mn]eha(.*)</match>
+        <match>.*ask [mn]eha(.*)</match>
     </group>
     <group name="weather">
         <action name="VOCI_FETCH_WEATHER"></action>
