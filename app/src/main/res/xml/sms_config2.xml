@@ -36,10 +36,10 @@
             <log text="BSNL bill payment last received on #DATE"/>
         </message>
     </Sender>
-    <Sender name="Vodafone">
-        <message text="Vodafone bill payment made">
-            <transaction type="meha_vodafone_bill"/>
-            <log text="Meha Vodafone bill payment last received on #DATE"/>
+    <Sender name=".*BESCOM.*">
+        <message text=".*Thank you for making Online Payment.*">
+            <transaction type="besom_bill"/>
+            <log text="Electricity (BESCOM) bill payment last made on #DATE"/>
         </message>
     </Sender>
     <Sender name="121">
