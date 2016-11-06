@@ -25,6 +25,10 @@
             <transaction type="house_rent"/>
             <log text="House Rent last paid on #DATE"/>
         </message>
+        <message text=".*INDRASADAN.*WELFARE.*was accepted.*">
+            <transaction type="house_maint"/>
+            <log text="Flat Maintenance last paid on #DATE"/>
+        </message>
         <message text=".*Payment.*received.*\*\*7533.*">
             <transaction type="citibank_credit_card"/>
             <log text="Citibank Credit card payment last done on #DATE"/>

@@ -742,6 +742,9 @@ public class MainActivity extends ActionBarActivity {
 
         message += "\n\nRENT:\n";
         message += prefs.getString("house_rent", "House Rent payment records not found");
+        message += "\n";
+        message += prefs.getString("house_maint", "Flat Maintenance payment records not found");
+
 
 
 
