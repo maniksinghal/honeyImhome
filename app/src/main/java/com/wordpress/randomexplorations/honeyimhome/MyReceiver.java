@@ -1,5 +1,7 @@
 package com.wordpress.randomexplorations.honeyimhome;
 
+import android.app.Notification;
+import android.app.NotificationManager;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
@@ -206,6 +208,38 @@ public class MyReceiver extends WakefulBroadcastReceiver {
     }
     */
 
+    /*
+     * Messages from Paytm
+     */
+    private void handle_paytm_message(String message, Context context, SharedPreferences prefs) {
+
+        int thres = Integer.parseInt(prefs.getString(context.getString(R.string.paytm_threshold), "0"));
+        if (message.matches("Avail.Bal:Rs")) {
+            String[] words = message.split(".");
+
+            // Expected message format:
+            // Avail.Bal:Rs.xyz.0.   => we need xyz here
+            int balance = Integer.parseInt(words[words.length - 2]);
+            Log.d("this", "Got Paytm balance: " + balance + " threshold set to: " + thres);
+            if (balance < thres) {
+                // Notification pop please
+                String reminder = "Low Paytm balance: " + balance;
+                Notification.Builder n = new Notification.Builder(context);
+                n.setContentTitle("Myapp");
+                n.setContentText(reminder);
+                n.setSmallIcon(R.mipmap.ic_launcher);
+                n.setAutoCancel(true);
+                Notification nt = n.build();
+
+                NotificationManager notificationManager =
+                        (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+                notificationManager.notify(0, nt);
+                Log.d("this", "Notifying the message: " + reminder);
+            }
+        }
+
+
+    }
     private void handle_sms_actions(Context context, Intent intent, SharedPreferences prefs) {
 
         String action = intent.getAction();
@@ -219,6 +253,7 @@ public class MyReceiver extends WakefulBroadcastReceiver {
 
         String senderNum = null;
         String message = null;
+        String paytm_sender = "[Pp][Aa][Yy][Tt][Mm]";
 
         // Extract message and phone number
         try {
@@ -234,6 +269,12 @@ public class MyReceiver extends WakefulBroadcastReceiver {
 
                     smsParser parser = new smsParser(currentMessage, thisContext);
                     parser.handleMessage();
+
+                    // Handle paytm messages separately
+                    if (phoneNumber.matches(paytm_sender)) {
+                        handle_paytm_message(message, context, prefs);
+                    }
+
 
                     // handle only one message
                     break;

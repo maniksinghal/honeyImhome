@@ -25,7 +25,7 @@
             <transaction type="house_rent"/>
             <log text="House Rent last paid on #DATE"/>
         </message>
-        <message text=".*INDRASADAN.*WELFARE.*was accepted.*">
+        <message text=".*8815 is debited.*XX879 credited.*IMPS.*">
             <transaction type="house_maint"/>
             <log text="Flat Maintenance last paid on #DATE"/>
         </message>

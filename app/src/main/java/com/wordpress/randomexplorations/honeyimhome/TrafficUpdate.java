@@ -11,6 +11,7 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 
 /**
@@ -162,10 +163,16 @@ public class TrafficUpdate extends AsyncTask<URL, Void, Void> {
     protected void onPostExecute(Void result) {
 
         String message = null;
+        Calendar inst;
         if (travel_time != null) {
-            // We were able to fetch weather
+            // We were able to fetch traffic information
+            // Travel_time is in format "<num> mins"
+            int minutes = Integer.parseInt(travel_time.split(" ")[0]);
+            inst = Calendar.getInstance();
+            inst.add(Calendar.MINUTE, minutes);
             message = "We should reach " + destination_name +
-                       " in around " + travel_time;
+                    " approximately by  " + inst.get(Calendar.HOUR) + " " +
+                    inst.get(Calendar.MINUTE);
         } else {
             message = "Traffic update is not available.";
         }

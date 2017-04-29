@@ -76,7 +76,9 @@ public class WeatherUpdate extends AsyncTask<URL, Void, Void> {
                 //Log.d("this", "Got start-tag: " + name);
                 if (name.equals("temperature")) {
                     description = parser.getAttributeValue(null, "text");
-                    temperature = parser.getAttributeValue(null, "value");
+
+                    // Fetch temperature and remove fractional part
+                    temperature = parser.getAttributeValue(null, "value").split(".")[0];
                     Log.d("this", "Got temperature: " + temperature);
                 } else if (name.equals("weather")) {
                     description = parser.getAttributeValue(null, "value");

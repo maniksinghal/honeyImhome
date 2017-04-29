@@ -905,10 +905,12 @@ public class MainActivity extends ActionBarActivity {
         }
     }
 
+    /*
     private void refresh_smartome_device() {
         smartomeSocket dev = new smartomeSocket("HD1-12903-043c", "192.168.1.7");
         new deviceRefresher().execute(dev);
     }
+    */
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
@@ -947,7 +949,7 @@ public class MainActivity extends ActionBarActivity {
             i.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_FETCH_WEATHER);
             i.putExtra(MyReceiver.EXTRA_FORCE_PLAY, true);
             MyReceiver.startWakefulService(this, i);
-
+        */
         } else if (id == R.id.action_time_to_office) {
             Intent i = new Intent(this, Jarvis.class);
             String orig = pref.getString(getString(R.string.home_loc), null);
@@ -961,7 +963,7 @@ public class MainActivity extends ActionBarActivity {
             i.putExtra(MyReceiver.EXTRA_ORIG_LOCATION, orig);
             i.putExtra(MyReceiver.EXTRA_FORCE_PLAY, true);
             MyReceiver.startWakefulService(this, i);
-
+/*
         } else if (id == R.id.action_fetch_news) {
             Intent i = new Intent(this, Jarvis.class);
             i.putExtra(MyReceiver.EXTRA_PURPOSE, MyReceiver.EXTRA_PURPOSE_FETCH_NEWS);
@@ -980,8 +982,10 @@ public class MainActivity extends ActionBarActivity {
             show_logging();
         } else if (id == R.id.show_saved_logging) {
             show_saved_logging();
+            /*
         } else if (id == R.id.refresh_device) {
             refresh_smartome_device();
+           */
         }
 
 

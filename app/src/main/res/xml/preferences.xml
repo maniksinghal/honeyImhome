@@ -36,6 +36,11 @@
         android:title="Test message"
         android:defaultValue="This is test message"
         android:summary="Message to play on speak-out" />
+    <EditTextPreference
+        android:key="@string/paytm_threshold"
+        android:title="PayTM balance threshold"
+        android:defaultValue="1000"
+        android:summary="Notify when Paytm balance goes beyond threshold" />
     <CheckBoxPreference
         android:key="@string/always_speak_out"
         android:title="Incoming hubby's messages/notifications"
