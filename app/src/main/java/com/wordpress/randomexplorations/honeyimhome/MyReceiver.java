@@ -214,7 +214,7 @@ public class MyReceiver extends WakefulBroadcastReceiver {
     private void handle_paytm_message(String message, Context context, SharedPreferences prefs) {
 
         int thres = Integer.parseInt(prefs.getString(context.getString(R.string.paytm_threshold), "0"));
-        if (message.matches("Avail.Bal:Rs")) {
+        if (message.matches("(.*)Avail.Bal:Rs(.*)")) {
             String[] words = message.split(".");
 
             // Expected message format:
@@ -253,7 +253,7 @@ public class MyReceiver extends WakefulBroadcastReceiver {
 
         String senderNum = null;
         String message = null;
-        String paytm_sender = "[Pp][Aa][Yy][Tt][Mm]";
+        String paytm_sender = "(.*)[Pp][Aa][Yy][Tt][Mm](.*)";
 
         // Extract message and phone number
         try {
